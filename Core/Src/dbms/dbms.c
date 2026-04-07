@@ -107,7 +107,7 @@ int DbmsPerformWakeup(DbmsCtx* ctx)
         ctx->led_state = LED_FIRMWARE_FAULT;
         return status; // we are cooked
     }
-
+    ctx->in = false;
     HAL_Delay(5);
     StackAutoAddr   (ctx);
     HAL_Delay(5);
@@ -287,9 +287,13 @@ void DbmsIter(DbmsCtx* ctx)
     }
 
     // StackReverseAutoAddr(ctx);
+    if (!ctx->in)
+    {
     HAL_Delay(5);
-    StackReverseCommDir(ctx, true);
+        // StackReverseCommDir(ctx, true);
+            HAL_Delay(5);
 
+    }
     // Let everybody know that we are alive
     CanTxHeartbeat(ctx, CalcCrc16((uint8_t*)ctx->settings, sizeof(DbmsSettings)));
     // ctx->profiling.profiling.times.T4 = GetUs(ctx);

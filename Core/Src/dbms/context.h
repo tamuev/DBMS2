@@ -348,6 +348,7 @@ typedef struct _DbmsCtx
     J1772 j1772;
     Charging charging;
     Profiling profiling;
+    bool in;
 } DbmsCtx;
 
 

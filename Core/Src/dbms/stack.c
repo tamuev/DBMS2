@@ -100,7 +100,7 @@ void SendAutoAddr(DbmsCtx* ctx)
 {    
     for (int i = 0; i <= N_STACKDEVS; i++)
     {
-        BROADCAST_WRITE(ctx, REG_DIR0_ADDR, DATA(0x00 + i));
+        BROADCAST_WRITE(ctx, REG_DIR0_ADDR, DATA(0x00 + i));   
     }
 }
 
@@ -147,6 +147,7 @@ void StackReverseAutoAddr(DbmsCtx* ctx)
 {
     // uint8_t frame_change_base_dev_dir[] = {0x90, 0x30, 0x09, 0x80, 0x00, 0x00};
     // SendStackFrameSetCrc(ctx, frame_change_base_dev_dir, sizeof(frame_change_base_dev_dir));
+    SINGLE_DEV_WRITE(ctx, 0x00, 0x309, DATA(dir));
     CanLog(ctx, "sdc");
     // uint8_t frame_reverse_broadcast_dir[] = {0xE0, 0x30, 0x09, 0x80, 0x00, 0x00};
     BROADCAST_REV_WRITE(ctx, 0x309, DATA(0x80));
@@ -163,19 +164,20 @@ void StackReverseAutoAddr(DbmsCtx* ctx)
 
 void StackReverseCommDir(DbmsCtx* ctx, bool reverse_direction)
 {
-    uint8_t dir = reverse_direction ? 0x80 : 0x00;
+    ctx->in = true;
+    uint8_t dir = 0x80;
     // uint8_t frame_change_base_dev_dir[] = {0x90, 0x00, 0x03, 0x09, dir, 0x00, 0x00};
     SINGLE_DEV_WRITE(ctx, 0x00, 0x309, DATA(dir));
     HAL_Delay(1);
     // uint8_t frame_reverse_broadcast_dir[] = {0xE0, 0x03, 0x09, dir, 0x00, 0x00};
-    BROADCAST_REV_WRITE(ctx, 0x308, DATA(0x00));
+    // BROADCAST_REV_WRITE(ctx, 0x308, DATA(0x00));
     HAL_Delay(1);
-    BROADCAST_REV_WRITE(ctx, 0x309, DATA(dir));
+    BROADCAST_REV_WRITE(ctx, 0x309, DATA(dir + 1));
     HAL_Delay(1);
     SendReverseAutoAddr(ctx);
     HAL_Delay(1);
     SendSetStackTop(ctx);
-    CanLog(ctx, "rev??");
+    CanLog(ctx, "rev??\n");
 }
 
 void SendReverseAutoAddr(DbmsCtx* ctx)
