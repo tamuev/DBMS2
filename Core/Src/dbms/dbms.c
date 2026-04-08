@@ -84,8 +84,6 @@ void DbmsInit(DbmsCtx* ctx)
 
     ctx->timing.last_rx_heartbeat = -GetSetting(ctx, QUIET_MS_BEFORE_SHUTDOWN);
 
-    memset(&ctx->faults.monitor_total_frames, 0, sizeof(ctx->faults.monitor_total_frames));
-    memset(&ctx->faults.monitor_bad_crcs, 0, sizeof(ctx->faults.monitor_bad_crcs));
 
     ReadEEPROM(ctx, EEPROM_DEBUG, &ctx->stats.n_int_shutdowns, 1);
 
@@ -117,7 +115,7 @@ int DbmsPerformWakeup(DbmsCtx* ctx)
     HAL_Delay(5);
     StackSetupVoltReadings(ctx); // todo: rn start
     HAL_Delay(5);
-    StackConfigTimeout(ctx);
+    // StackConfigTimeout(ctx);
 
     HAL_Delay(5);
     StackBalancingConfig(ctx);

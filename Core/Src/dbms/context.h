@@ -19,7 +19,7 @@
 
 #define SPLIT_STACK_OPS     1       // 1 = divide stack ops in half, every-other-iter, 0 = do not
 
-#define N_SEGMENTS          1       // number of segments in the stack
+#define N_SEGMENTS          2       // number of segments in the stack
 #define N_SIDES_PER_SEG     2       // number of sides per segment
 #define N_MONITORS_PER_SIDE 1       // number of monitors per side
 #define N_GROUPS_PER_SIDE   13      // number of voltages per side
@@ -136,7 +136,8 @@ typedef struct _Stats
 
     uint64_t n_logging_frames;
     bool fault_line_faulted;
-
+    uint16_t monitor_bad_crcs[N_MONITORS];
+    uint16_t monitor_total_frames[N_MONITORS];
 } Stats;
 
 typedef struct _Model   // Outputs from the ECM model
@@ -276,8 +277,6 @@ typedef struct _FaultState {
     uint32_t bridge_faults;
     uint8_t monitor_fault_summary[N_MONITORS];
     bool had_fault;
-    uint8_t monitor_bad_crcs[N_MONITORS];
-    uint8_t monitor_total_frames[N_MONITORS];
 } FaultState;
 
 typedef struct _Blackbox {

@@ -147,7 +147,7 @@ void StackReverseAutoAddr(DbmsCtx* ctx)
 {
     // uint8_t frame_change_base_dev_dir[] = {0x90, 0x30, 0x09, 0x80, 0x00, 0x00};
     // SendStackFrameSetCrc(ctx, frame_change_base_dev_dir, sizeof(frame_change_base_dev_dir));
-    SINGLE_DEV_WRITE(ctx, 0x00, 0x309, DATA(dir));
+    SINGLE_DEV_WRITE(ctx, 0x00, 0x309, DATA(0x80));
     CanLog(ctx, "sdc");
     // uint8_t frame_reverse_broadcast_dir[] = {0xE0, 0x30, 0x09, 0x80, 0x00, 0x00};
     BROADCAST_REV_WRITE(ctx, 0x309, DATA(0x80));
@@ -170,9 +170,9 @@ void StackReverseCommDir(DbmsCtx* ctx, bool reverse_direction)
     SINGLE_DEV_WRITE(ctx, 0x00, 0x309, DATA(dir));
     HAL_Delay(1);
     // uint8_t frame_reverse_broadcast_dir[] = {0xE0, 0x03, 0x09, dir, 0x00, 0x00};
-    // BROADCAST_REV_WRITE(ctx, 0x308, DATA(0x00));
+    BROADCAST_REV_WRITE(ctx, 0x308, DATA(0x00));
     HAL_Delay(1);
-    BROADCAST_REV_WRITE(ctx, 0x309, DATA(dir + 1));
+    BROADCAST_REV_WRITE(ctx, 0x309, DATA(dir));
     HAL_Delay(1);
     SendReverseAutoAddr(ctx);
     HAL_Delay(1);
@@ -183,6 +183,8 @@ void StackReverseCommDir(DbmsCtx* ctx, bool reverse_direction)
 void SendReverseAutoAddr(DbmsCtx* ctx)
 {
     // uint8_t frame_addr_dev[] = {0xD0, 0x03, 0x07, 0x00, 0x00, 0x00};
+    BROADCAST_WRITE(ctx, 0x309, DATA(0x81));
+    HAL_Delay(1);
     for (int i = 0; i <= N_STACKDEVS; i++)
     {
         BROADCAST_WRITE(ctx, 0x307, DATA(i));
@@ -224,7 +226,8 @@ void StackSetupVoltReadings(DbmsCtx* ctx)
  */
 void StackUpdateAllVoltReadings(DbmsCtx* ctx)
 {
-    uint8_t rx_buffer_v[1024];
+    uint8_t rx_buffer_v[1024] = {0};
+    int j = 0;
     size_t data_size = N_GROUPS_PER_SIDE * sizeof(int16_t);
     size_t expected_rx_size = RX_FRAME_SIZE(data_size) * N_MONITORS;
 
@@ -234,9 +237,14 @@ void StackUpdateAllVoltReadings(DbmsCtx* ctx)
     {
         IncStackCrcStats(ctx, true, i);
         // TODO: test without on new battery to see if this is necessary
+        j += (i * RX_FRAME_SIZE(data_size));
         uint8_t* data = rx_buffer_v + (i * RX_FRAME_SIZE(data_size));
-        for (int j = 0; (data[0] != (STACK_V_REG_START & 0xFF)) && (j < 1024); j++) { data++; }
-        
+        // CanLog(ctx, "V %x\n", data[0]);
+        for (; (data[0] != (STACK_V_REG_START & 0xFF)) && (j < 1024); j++) { 
+            data++;
+            // if (data[0] == 0x8E) CanLog(ctx, "mix V\n");
+        }
+        if (j >= 1024) continue;
         RxStackFrameVoltages* clean_frame = (RxStackFrameVoltages*)(data - 3);
         if (clean_frame->crc == CALC_CRC_Rx(clean_frame))
             UpdateVoltages(ctx, clean_frame);
@@ -283,8 +291,8 @@ void StackConfigTimeout(DbmsCtx* ctx)
 
 void StackUpdateAllTempReadings(DbmsCtx* ctx)
 {
-    uint8_t rx_buffer_t[1024];
-
+    uint8_t rx_buffer_t[1024] = {0};
+    int j = 0;
     size_t data_size = (N_TEMPS_POLL_PER_MONITOR + 2) * sizeof(int16_t); // +2 for GPIO mismatch
     size_t expected_rx_size = RX_FRAME_SIZE(data_size) * N_MONITORS;
 
@@ -294,9 +302,14 @@ void StackUpdateAllTempReadings(DbmsCtx* ctx)
     {
         IncStackCrcStats(ctx, true, i);
         // TODO: test without on new battery to see if this is necessary
+        j += (i * RX_FRAME_SIZE(data_size));
         uint8_t* data = rx_buffer_t + (i * RX_FRAME_SIZE(data_size));
-        for (int j = 0; data[0] != (STACK_T_REG_START & 0xFF) && j < 1024; j++) { data++; }
-
+        // CanLog(ctx, "T %x\n", data[0]);
+        for (; data[0] != (STACK_T_REG_START & 0xFF) && j < 1024; j++) { 
+            data++; 
+            // if (data[0] == 0x6C) CanLog(ctx, "mix T\n");
+        }
+        if (j >= 1024) continue;
         RxStackFrameTemps* clean_frame = (RxStackFrameTemps*)(data - 3); 
         if (clean_frame->crc == CALC_CRC_Rx(clean_frame))
             UpdateTemps(ctx, clean_frame);
@@ -429,13 +442,13 @@ void IncStackCrcStats(DbmsCtx* ctx, bool good, int monitor_id)
     {
         ctx->stats.n_rx_stack_frames++;
         ctx->stats.n_rx_stack_frames_itvl++;
-        ctx->faults.monitor_total_frames[monitor_id]++;
+        ctx->stats.monitor_total_frames[monitor_id]++;
     }
     else
     {
         ctx->stats.n_rx_stack_bad_crcs++;
         ctx->stats.n_rx_stack_bad_crcs_itvl++;
-        ctx->faults.monitor_bad_crcs[monitor_id]++;
+        ctx->stats.monitor_bad_crcs[monitor_id]++;
     }
 }
 

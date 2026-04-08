@@ -23,8 +23,8 @@
 #include "stack.h"
 
 // TODO: optimize the shit out of this
-#define STACK_SEND_TIMEOUT 50
-#define STACK_RECV_TIMEOUT 50
+#define STACK_SEND_TIMEOUT 10
+#define STACK_RECV_TIMEOUT 15
 
 #define APBxCLK 42000000    // TODO: fix legacy name
 

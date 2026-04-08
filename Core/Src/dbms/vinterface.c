@@ -177,12 +177,13 @@ int SendMetrics(DbmsCtx* ctx)
 
     SendMetric(ctx, 69, F2I_K(ctx->stats.pack_v, 1e4));
     SendMetric(ctx, 70, ctx->precharged);
-    SendMetric(ctx, 71, (ctx->stats.n_rx_stack_bad_crcs_itvl * 100) / ctx->stats.n_rx_stack_frames_itvl);
+    if (ctx->stats.n_rx_stack_frames_itvl != 0)
+        SendMetric(ctx, 71, (ctx->stats.n_rx_stack_bad_crcs_itvl * 100) / ctx->stats.n_rx_stack_frames_itvl);
     SendMetric(ctx, 72, ctx->stats.n_int_shutdowns);
 
     for (int i = 0; i < N_MONITORS; i++)
     {
-        SendMetric(ctx, 80 + i, ctx->faults.monitor_bad_crcs[i]);
+        SendMetric(ctx, 90 + i, ctx->stats.monitor_bad_crcs[i]);
     }
     return 0;
 }
@@ -231,7 +232,8 @@ void SendPlexMetrics(DbmsCtx* ctx)
     SendPlex32(ctx, 0x1a, ctx->timing.pl_pulse_t);
     SendPlex32(ctx, 0x1b, pack_v);
     SendPlex32(ctx, 0x1c, ctx->stats.iters);
-    SendPlex32(ctx, 0x1d, (ctx->stats.n_rx_stack_bad_crcs_itvl * 100) / ctx->stats.n_rx_stack_frames_itvl);
+    if (ctx->stats.n_rx_stack_frames_itvl != 0)
+        SendPlex32(ctx, 0x1d, (ctx->stats.n_rx_stack_bad_crcs_itvl * 100) / ctx->stats.n_rx_stack_frames_itvl);
     SendPlex32(ctx, 0x1e, ctx->current_sensor.charge_as);
 
 #ifndef F2I_K
