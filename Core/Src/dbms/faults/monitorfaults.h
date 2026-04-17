@@ -15,9 +15,7 @@ struct FaultSummary {
     uint8_t otp;
     uint8_t sys;
     uint8_t prot1;
-    uint8_t ov[2];
-    uint8_t uv[2];
-    uint8_t otut[2];
+    // prot2
     uint8_t pwr[3];
 }
 
