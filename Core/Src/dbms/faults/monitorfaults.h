@@ -6,18 +6,10 @@
 #include "../settings.h"
 #include "../vinterface.h"
 #include "../dbms.h"
+#include "../stack.h"
 
+#define FAULT_SUMMARY_REG   0x52D
 #define FAULT_SUMMARY_MASK  0x41
-
-struct FaultSummary {
-    uint8_t summary;
-    uint8_t comm[3];
-    uint8_t otp;
-    uint8_t sys;
-    uint8_t prot1;
-    // prot2
-    uint8_t pwr[3];
-}
 
 #define PROT(summary)   summary & 0x80
 #define OTP(summary)    summary & 0x20

@@ -194,7 +194,6 @@ void StackUpdateAllVoltReadings(DbmsCtx* ctx)
             UpdateVoltages(ctx, clean_frame);
         else
             IncStackCrcStats(ctx, false, i);
-
     }
 }
 

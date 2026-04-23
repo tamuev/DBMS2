@@ -263,6 +263,16 @@ typedef struct _Flags {
     bool shutdown_stack_requested;
 } Flags;
 
+
+typedef struct _MonitorFaults {
+    uint8_t summary;
+    uint8_t comm[3];
+    uint8_t otp;
+    uint8_t sys;
+    uint8_t prot[2];
+    uint8_t pwr[3];
+} MonitorFaults
+
 typedef struct _ChargeStats {
     float initial;
     float historic_accumulated_loss;
@@ -349,6 +359,7 @@ typedef struct _DbmsCtx
     J1772 j1772;
     Charging charging;
     Profiling profiling;
+    MonitorFaults monitor_faults[N_MONITORS];
 } DbmsCtx;
 
 
