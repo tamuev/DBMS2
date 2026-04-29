@@ -113,6 +113,31 @@ void CheckStackFaults(DbmsCtx* ctx)
 
     if (GetUs(ctx) - ctx->stats.last_can_tx_ts >= GetSetting(ctx, MS_BEFORE_CAN_FAIL) * 1000)
     {
-        CtrlSetFault(ctx, CTRL_FAULT_CAN_FAIL, CELL_BYTE_NA, 0);
+        CtrlSetFault(ctx, CTRL_FAULT_CAN_FAIL, CELL_BYTE_NA, BIT(CTRL_TX_FAILS));
+    }
+
+    if (GetUs(ctx) - ctx->stats.last_ivt_rx_ts >= GetSetting(ctx, MS_BEFORE_CAN_FAIL) * 1000)
+    {
+        CtrlSetFault(ctx, CTRL_FAULT_CAN_FAIL, CELL_BYTE_NA, BIT(CTRL_ISENSE_DC));
+    }
+
+    bool can_bus_off = (ctx->hw.can->Instance->ESR & CAN_ESR_BOFF) != 0;
+    uint64_t now_us = GetUs(ctx);
+
+    if (can_bus_off)
+    {
+        ctx->stats.last_can_bad_ts = now_us;
+    }
+
+    if (ctx->stats.last_can_bo_ts != 0)
+    {
+        if (now_us - ctx->stats.last_can_bad_ts >= GetSetting(ctx, CAN_BUSOFF_GOOD_MS) * 1000)
+        {
+            ctx->stats.last_can_bo_ts = 0;
+        }
+        else if (now_us - ctx->stats.last_can_bo_ts > GetSetting(ctx, CAN_BUSOFF_RECOVERY_MS) * 1000)
+        {
+            CtrlSetFault(ctx, CTRL_FAULT_CAN_FAIL, CELL_BYTE_NA, BIT(CTRL_BUSOFF));
+        }
     }
 }

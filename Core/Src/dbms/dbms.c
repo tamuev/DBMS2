@@ -459,6 +459,7 @@ void DbmsCanRx(DbmsCtx* ctx, CanRxChannel channel, CAN_RxHeaderTypeDef rx_header
         ctx->current_sensor.current_ma = (int32_t)UnpackCurrentSensorData(rx_data);
         break;
     case CANID_ISENSE_VOLTAGE1:
+        ctx->stats.last_ivt_rx_ts = GetUs(ctx);
         ctx->current_sensor.voltage1_mv = (int32_t)UnpackCurrentSensorData(rx_data);
         break;
     case CANID_ISENSE_POWER:
