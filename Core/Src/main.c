@@ -119,8 +119,8 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   dbms_ctx.hw.adc = &hadc1;
-  dbms_ctx.hw.can1 = &hcan1;
-  dbms_ctx.hw.can2 = &hcan2;
+  dbms_ctx.hw.elcon_can = &hcan1;
+  dbms_ctx.hw.can = &hcan2;
   dbms_ctx.hw.timer = &htim5;
   dbms_ctx.hw.timer_pwm_1 = &htim3;
   dbms_ctx.hw.uart = &huart4;

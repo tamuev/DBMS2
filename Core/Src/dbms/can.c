@@ -101,7 +101,7 @@ int ConfigCanFilters(CAN_HandleTypeDef *hcan, const CanFilterMask *filters, size
 
 
 // CAN1 = charger bus (500k), no queue, ELCON only
-int ConfigCan1(DbmsCtx* ctx)
+int ConfigElconCan(DbmsCtx* ctx)
 {
     g_can_ctx = ctx;
     int status = 0;
@@ -113,7 +113,7 @@ int ConfigCan1(DbmsCtx* ctx)
         { CANID_ELCON_RX, 0x1FFFFFFF, true }
     };
 
-    if ((status = ConfigCanFilters(ctx->hw.can1, charger_masks,
+    if ((status = ConfigCanFilters(ctx->hw.elcon_can, charger_masks,
                                    sizeof(charger_masks)/sizeof(charger_masks[0]),
                                    base_bank)) != 0)
     {
@@ -121,13 +121,13 @@ int ConfigCan1(DbmsCtx* ctx)
         return status;
     }
 
-    if ((status = HAL_CAN_Start(ctx->hw.can1)) != HAL_OK)
+    if ((status = HAL_CAN_Start(ctx->hw.elcon_can)) != HAL_OK)
     {
         ctx->led_state = LED_FIRMWARE_FAULT;
         return status;
     }
 
-    if ((status = HAL_CAN_ActivateNotification(ctx->hw.can1,
+    if ((status = HAL_CAN_ActivateNotification(ctx->hw.elcon_can,
                                             CAN_IT_RX_FIFO0_MSG_PENDING)) != HAL_OK)
     {
         ctx->led_state = LED_FIRMWARE_FAULT;
@@ -138,7 +138,7 @@ int ConfigCan1(DbmsCtx* ctx)
 }
 
 // CAN2 = vehicle bus (1M), queued TX
-int ConfigCan2(DbmsCtx* ctx)
+int ConfigCan(DbmsCtx* ctx)
 {
     g_can_ctx = ctx;
     int status = 0;
@@ -150,7 +150,7 @@ int ConfigCan2(DbmsCtx* ctx)
         { 0x500, 0x700, false }
     };
 
-    if ((status = ConfigCanFilters(ctx->hw.can2, masks,
+    if ((status = ConfigCanFilters(ctx->hw.can, masks,
                                    sizeof(masks)/sizeof(masks[0]),
                                    base_bank)) != 0)
     {
@@ -158,13 +158,13 @@ int ConfigCan2(DbmsCtx* ctx)
         return status;
     }
 
-    if ((status = HAL_CAN_Start(ctx->hw.can2)) != HAL_OK)
+    if ((status = HAL_CAN_Start(ctx->hw.can)) != HAL_OK)
     {
         ctx->led_state = LED_FIRMWARE_FAULT;
         return status;
     }
 
-    if ((status = HAL_CAN_ActivateNotification(ctx->hw.can2,
+    if ((status = HAL_CAN_ActivateNotification(ctx->hw.can,
                                             CAN_IT_RX_FIFO0_MSG_PENDING |
                                             CAN_IT_RX_FIFO1_MSG_PENDING |
                                             CAN_IT_TX_MAILBOX_EMPTY)) != HAL_OK)
@@ -238,18 +238,18 @@ int CanTransmit(DbmsCtx* ctx, uint32_t id, uint8_t data[8])
 
     __disable_irq();
 
-    if (tx_queue.count == 0 && HAL_CAN_GetTxMailboxesFreeLevel(ctx->hw.can2) > 0U)
+    if (tx_queue.count == 0 && HAL_CAN_GetTxMailboxesFreeLevel(ctx->hw.can) > 0U)
     {
         if (id == CANID_TX_DELAY)
         {
             ctx->delay.T1 = GET_US2();
         }
-        int32_t result = HAL_CAN_AddTxMessage(ctx->hw.can2, hdr, data, &ctx->hw.can_tx_mailbox);
+        int32_t result = HAL_CAN_AddTxMessage(ctx->hw.can, hdr, data, &ctx->hw.can_tx_mailbox);
 
         if (result != HAL_OK)
         {
             ctx->stats.n_tx_can_fail++;
-            ctx->last_can_err = HAL_CAN_GetError(ctx->hw.can2);
+            ctx->last_can_err = HAL_CAN_GetError(ctx->hw.can);
         }
         else
         {
@@ -274,7 +274,7 @@ int CanTransmit(DbmsCtx* ctx, uint32_t id, uint8_t data[8])
 
     __enable_irq();
 
-    SendFromQueue(ctx->hw.can2);
+    SendFromQueue(ctx->hw.can);
 
     return HAL_OK;
 }
@@ -286,32 +286,32 @@ int CanChargeTransmit(DbmsCtx* ctx, uint32_t id, uint8_t data[8])
 
     if (id > CAN_STD_ID_MASK)
     {
-        hdr.IDE   = CAN_ID_EXT;
+        hdr.IDE = CAN_ID_EXT;
         hdr.ExtId = id & CAN_EXT_ID_MASK;
     }
     else
     {
-        hdr.IDE   = CAN_ID_STD;
+        hdr.IDE = CAN_ID_STD;
         hdr.StdId = id & CAN_STD_ID_MASK;
     }
-    hdr.RTR                = CAN_RTR_DATA;
-    hdr.DLC                = 8;
+    hdr.RTR = CAN_RTR_DATA;
+    hdr.DLC = 8;
     hdr.TransmitGlobalTime = DISABLE;
 
-    if (HAL_CAN_GetTxMailboxesFreeLevel(ctx->hw.can1) == 0U)
+    if (HAL_CAN_GetTxMailboxesFreeLevel(ctx->hw.elcon_can) == 0U)
     {
         ctx->stats.n_tx_can_fail++;
-        ctx->last_can_err = HAL_CAN_GetError(ctx->hw.can1);
+        ctx->last_can_err = HAL_CAN_GetError(ctx->hw.elcon_can);
         return HAL_BUSY;
     }
 
     uint32_t mailbox;
-    int32_t result = HAL_CAN_AddTxMessage(ctx->hw.can1, &hdr, data, &mailbox);
+    int32_t result = HAL_CAN_AddTxMessage(ctx->hw.elcon_can, &hdr, data, &mailbox);
 
     if (result != HAL_OK)
     {
         ctx->stats.n_tx_can_fail++;
-        ctx->last_can_err = HAL_CAN_GetError(ctx->hw.can1);
+        ctx->last_can_err = HAL_CAN_GetError(ctx->hw.elcon_can);
         return result;
     }
 

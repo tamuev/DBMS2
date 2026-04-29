@@ -57,14 +57,14 @@ void DbmsInit(DbmsCtx* ctx)
 
     HAL_TIM_Base_Start(ctx->hw.timer);
 
-    if ((status = ConfigCan1(ctx)) != HAL_OK)
+    if ((status = ConfigElconCan(ctx)) != HAL_OK)
     {
         CAN_REPORT_FAULT(ctx, status);
         ctx->led_state = LED_FIRMWARE_FAULT;
         return;
     }
 
-    if ((status = ConfigCan2(ctx)) != HAL_OK)
+    if ((status = ConfigCan(ctx)) != HAL_OK)
     {
         CAN_REPORT_FAULT(ctx, status);
         ctx->led_state = LED_FIRMWARE_FAULT;
