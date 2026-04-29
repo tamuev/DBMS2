@@ -105,4 +105,6 @@ int ConfigCan(DbmsCtx* ctx);
 
 int CanTransmit(DbmsCtx* ctx, uint32_t id, uint8_t data[8]);
 
+int Can2Transmit(DbmsCtx* ctx, uint32_t id, uint8_t data[8]);
+
 #endif

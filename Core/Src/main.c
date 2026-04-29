@@ -119,7 +119,8 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   dbms_ctx.hw.adc = &hadc1;
-  dbms_ctx.hw.can = &hcan2;
+  dbms_ctx.hw.can1 = &hcan1;
+  dbms_ctx.hw.can2 = &hcan2;
   dbms_ctx.hw.timer = &htim5;
   dbms_ctx.hw.timer_pwm_1 = &htim3;
   dbms_ctx.hw.uart = &huart4;
@@ -302,8 +303,8 @@ static void MX_CAN2_Init(void)
   hcan2.Init.Prescaler = 6;
   hcan2.Init.Mode = CAN_MODE_NORMAL;
   hcan2.Init.SyncJumpWidth = CAN_SJW_1TQ;
-  hcan2.Init.TimeSeg1 = CAN_BS1_5TQ;
-  hcan2.Init.TimeSeg2 = CAN_BS2_1TQ;
+  hcan2.Init.TimeSeg1 = CAN_BS1_11TQ;
+  hcan2.Init.TimeSeg2 = CAN_BS2_2TQ;
   hcan2.Init.TimeTriggeredMode = DISABLE;
   hcan2.Init.AutoBusOff = DISABLE;
   hcan2.Init.AutoWakeUp = DISABLE;

@@ -42,9 +42,8 @@ static DbmsCtx* g_can_ctx = NULL;
 /**
  * Configure CAN RX filters
  */
-int ConfigCanFilters(CAN_HandleTypeDef *hcan, const CanFilterMask *filters, size_t count)
+int ConfigCanFilters(CAN_HandleTypeDef *hcan, const CanFilterMask *filters, size_t count, const int base_bank)
 {
-    const int base_bank = 14;
     int status = HAL_OK, bank = 0;
     size_t i = 0;
 
@@ -101,33 +100,32 @@ int ConfigCanFilters(CAN_HandleTypeDef *hcan, const CanFilterMask *filters, size
 }
 
 
-int ConfigCan(DbmsCtx* ctx)
+int ConfigCan1(DbmsCtx* ctx)
 {
     g_can_ctx = ctx;
     int status = 0;
+    const int base_bank = 0;
     CanFilterMask masks[] =
     {
         { 0x0B0, 0x7F0, false },
-        { 0x500, 0x700, false },
-        { CANID_ELCON_TX, 0, true },
-        { CANID_ELCON_RX, 0, true }
+        { 0x500, 0x700, false }
     };
 
-    if ((status = ConfigCanFilters(ctx->hw.can, masks, sizeof(masks)/sizeof(masks[0]))) != 0)
+    if ((status = ConfigCanFilters(ctx->hw.can1, masks, sizeof(masks)/sizeof(masks[0], base_bank))) != 0)
     {
         ctx->led_state = LED_FIRMWARE_FAULT;
         return status;
     }
 
     // Start CAN
-    if ((status = HAL_CAN_Start(ctx->hw.can)) != HAL_OK)
+    if ((status = HAL_CAN_Start(ctx->hw.can1)) != HAL_OK)
     {
         ctx->led_state = LED_FIRMWARE_FAULT;
         return status;
     }
 
     // Enable interrupts
-    if ((status = HAL_CAN_ActivateNotification(ctx->hw.can,
+    if ((status = HAL_CAN_ActivateNotification(ctx->hw.can1,
                                             CAN_IT_RX_FIFO0_MSG_PENDING |
                                             CAN_IT_RX_FIFO1_MSG_PENDING |
                                             CAN_IT_TX_MAILBOX_EMPTY)) != HAL_OK)
@@ -137,13 +135,48 @@ int ConfigCan(DbmsCtx* ctx)
     }
 
     // Configure TX header (example)
-    ctx->hw.can_tx_header.StdId = 0x500;
-    ctx->hw.can_tx_header.IDE = CAN_ID_STD;
-    ctx->hw.can_tx_header.RTR = CAN_RTR_DATA;
-    ctx->hw.can_tx_header.DLC = 8;
-    ctx->hw.can_tx_header.TransmitGlobalTime = DISABLE;
+    ctx->hw.can1_tx_header.StdId = 0x500;
+    ctx->hw.can1_tx_header.IDE = CAN_ID_STD;
+    ctx->hw.can1_tx_header.RTR = CAN_RTR_DATA;
+    ctx->hw.can1_tx_header.DLC = 8;
+    ctx->hw.can1_tx_header.TransmitGlobalTime = DISABLE;
 
     return status;
+}
+
+int ConfigCan2(DbmsCtx* ctx)
+{
+    g_can_ctx = ctx;
+    int status = 0;
+    const int base_bank = 14;
+
+    CanFilterMask charger_masks[] = {
+        { CANID_ELCON_TX, 0x1FFFFFFF, true },
+        { CANID_ELCON_RX, 0x1FFFFFFF,  true }
+    }
+
+    if ((status = ConfigCanFilters(ctx->hw.can1, charger_masks, sizeof(charger_masks)/sizeof(charger_masks[0], base_bank))) != 0)
+    {
+        ctx->led_state = LED_FIRMWARE_FAULT;
+        return status;
+    }
+
+    // Start CAN
+    if ((status = HAL_CAN_Start(ctx->hw.can2)) != HAL_OK)
+    {
+        ctx->led_state = LED_FIRMWARE_FAULT;
+        return status;
+    }
+
+    // Enable interrupts
+    if ((status = HAL_CAN_ActivateNotification(ctx->hw.can2,
+                                            CAN_IT_RX_FIFO0_MSG_PENDING |
+                                            CAN_IT_RX_FIFO1_MSG_PENDING |
+                                            CAN_IT_TX_MAILBOX_EMPTY)) != HAL_OK)
+    {
+        ctx->led_state = LED_FIRMWARE_FAULT;
+        return status;
+    }
 }
 
 static void SendFromQueue(CAN_HandleTypeDef *hcan)
@@ -152,7 +185,7 @@ static void SendFromQueue(CAN_HandleTypeDef *hcan)
     {
         CanTxQueueItem* entry = &tx_queue.buffer[tx_queue.tail];
 
-        if (entry->header.StdId == CANID_TX_DELAY) 
+        if (entry->header.StdId == CANID_TX_DELAY)
         {
             if (g_can_ctx)
                 g_can_ctx->delay.T1 = GET_US2();
@@ -184,7 +217,7 @@ static void SendFromQueue(CAN_HandleTypeDef *hcan)
 
 int CanTransmit(DbmsCtx* ctx, uint32_t id, uint8_t data[8])
 {
-    CAN_TxHeaderTypeDef* hdr = &ctx->hw.can_tx_header;
+    CAN_TxHeaderTypeDef* hdr = &ctx->hw.can1_tx_header;
 
     // Determine if extended or standard ID
     if (id > CAN_STD_ID_MASK)
@@ -204,19 +237,19 @@ int CanTransmit(DbmsCtx* ctx, uint32_t id, uint8_t data[8])
 
     __disable_irq();
 
-    if (tx_queue.count == 0 && HAL_CAN_GetTxMailboxesFreeLevel(ctx->hw.can) > 0U)
+    if (tx_queue.count == 0 && HAL_CAN_GetTxMailboxesFreeLevel(ctx->hw.can1) > 0U)
     {
-        if (id == CANID_TX_DELAY) 
+        if (id == CANID_TX_DELAY)
         {
             ctx->delay.T1 = GET_US2();
         }
-        int32_t result = HAL_CAN_AddTxMessage(ctx->hw.can, hdr, data, &ctx->hw.can_tx_mailbox);
+        int32_t result = HAL_CAN_AddTxMessage(ctx->hw.can1, hdr, data, &ctx->hw.can1_tx_mailbox);
 
         if (result != HAL_OK)
         {
             ctx->stats.n_tx_can_fail++;
             // ctx->led_state = LED_COMM_ERROR;
-            ctx->last_can_err = HAL_CAN_GetError(ctx->hw.can);
+            ctx->last_can_err = HAL_CAN_GetError(ctx->hw.can1);
         }
         else
         {
@@ -241,7 +274,7 @@ int CanTransmit(DbmsCtx* ctx, uint32_t id, uint8_t data[8])
 
     __enable_irq();
 
-    SendFromQueue(ctx->hw.can);
+    SendFromQueue(ctx->hw.can1);
 
     return HAL_OK;
 }

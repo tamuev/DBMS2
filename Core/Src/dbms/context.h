@@ -82,7 +82,8 @@ typedef struct _HwCtx
     UART_HandleTypeDef* uart;
     I2C_HandleTypeDef* i2c;
 
-    CAN_HandleTypeDef* can;
+    CAN_HandleTypeDef* can1; // vehicle bus -- 1m
+    CAN_HandleTypeDef* can2; // charger bus -- 500k
     CAN_TxHeaderTypeDef can_tx_header;
     uint32_t can_tx_mailbox;
 } HwCtx;
