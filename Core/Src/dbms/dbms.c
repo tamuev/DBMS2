@@ -57,6 +57,13 @@ void DbmsInit(DbmsCtx* ctx)
 
     HAL_TIM_Base_Start(ctx->hw.timer);
 
+    if ((status = ConfigElconCan(ctx)) != HAL_OK)
+    {
+        CAN_REPORT_FAULT(ctx, status);
+        ctx->led_state = LED_FIRMWARE_FAULT;
+        return;
+    }
+
     if ((status = ConfigCan(ctx)) != HAL_OK)
     {
         CAN_REPORT_FAULT(ctx, status);
@@ -181,7 +188,7 @@ void DbmsHandleActive(DbmsCtx* ctx)
     StackUpdateAllVoltReadings(ctx);
     HAL_Delay(10);
     ctx->profiling.times.T1 = GetUs(ctx);
-    
+
     StackUpdateAllTempReadings(ctx);
     HAL_Delay(10);
     ctx->profiling.times.T2 = GetUs(ctx);
