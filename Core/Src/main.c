@@ -119,6 +119,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   dbms_ctx.hw.adc = &hadc1;
+  dbms_ctx.hw.elcon_can = &hcan1;
   dbms_ctx.hw.can = &hcan2;
   dbms_ctx.hw.timer = &htim5;
   dbms_ctx.hw.timer_pwm_1 = &htim3;
@@ -257,11 +258,11 @@ static void MX_CAN1_Init(void)
 
   /* USER CODE END CAN1_Init 1 */
   hcan1.Instance = CAN1;
-  hcan1.Init.Prescaler = 16;
+  hcan1.Init.Prescaler = 6;
   hcan1.Init.Mode = CAN_MODE_NORMAL;
   hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
-  hcan1.Init.TimeSeg1 = CAN_BS1_1TQ;
-  hcan1.Init.TimeSeg2 = CAN_BS2_1TQ;
+  hcan1.Init.TimeSeg1 = CAN_BS1_11TQ;
+  hcan1.Init.TimeSeg2 = CAN_BS2_2TQ;
   hcan1.Init.TimeTriggeredMode = DISABLE;
   hcan1.Init.AutoBusOff = DISABLE;
   hcan1.Init.AutoWakeUp = DISABLE;
@@ -421,7 +422,7 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 15999;
+  htim2.Init.Prescaler = 83;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.Period = 4294967295;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -443,7 +444,7 @@ static void MX_TIM2_Init(void)
   sSlaveConfig.InputTrigger = TIM_TS_TI1FP1;
   sSlaveConfig.TriggerPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
   sSlaveConfig.TriggerPrescaler = TIM_ICPSC_DIV1;
-  sSlaveConfig.TriggerFilter = 0;
+  sSlaveConfig.TriggerFilter = 0xF;
   if (HAL_TIM_SlaveConfigSynchro(&htim2, &sSlaveConfig) != HAL_OK)
   {
     Error_Handler();
@@ -451,7 +452,7 @@ static void MX_TIM2_Init(void)
   sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
   sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
   sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
-  sConfigIC.ICFilter = 0;
+  sConfigIC.ICFilter = 0xF;
   if (HAL_TIM_IC_ConfigChannel(&htim2, &sConfigIC, TIM_CHANNEL_1) != HAL_OK)
   {
     Error_Handler();
@@ -753,7 +754,7 @@ void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan)
         // else
         //     rxHeader.ExtId = (rir & (CAN_RI0R_EXID | CAN_RI0R_STID)) >> CAN_RI0R_EXID_Pos;
 
-        DbmsCanRx(&dbms_ctx, CAN_RX_1, rxHeader, rxData);
+        DbmsCanRx(&dbms_ctx, CAN_RX_0, rxHeader, rxData);
     }
 }
 
@@ -764,7 +765,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
         uint32_t captured_value = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
         if (captured_value)
         {
-            dbms_ctx.j1772.cp_duty_cycle = 100 * HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2) / captured_value; // if 1 µs timer tick
+            dbms_ctx.j1772.cp_duty_cycle = 100 *  HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2) / captured_value; // if 1 µs timer tick
         }
         dbms_ctx.j1772.last_cp_pwm_read = HAL_GetTick();
         //update receive ts

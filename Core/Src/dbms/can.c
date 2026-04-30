@@ -42,9 +42,8 @@ static DbmsCtx* g_can_ctx = NULL;
 /**
  * Configure CAN RX filters
  */
-int ConfigCanFilters(CAN_HandleTypeDef *hcan, const CanFilterMask *filters, size_t count)
+int ConfigCanFilters(CAN_HandleTypeDef *hcan, const CanFilterMask *filters, size_t count, const int base_bank)
 {
-    const int base_bank = 14;
     int status = HAL_OK, bank = 0;
     size_t i = 0;
 
@@ -101,32 +100,70 @@ int ConfigCanFilters(CAN_HandleTypeDef *hcan, const CanFilterMask *filters, size
 }
 
 
-int ConfigCan(DbmsCtx* ctx)
+// CAN1 = charger bus (500k), no queue, ELCON only
+int ConfigElconCan(DbmsCtx* ctx)
 {
     g_can_ctx = ctx;
     int status = 0;
-    CanFilterMask masks[] =
+    const int base_bank = 0;
+
+    CanFilterMask charger_masks[] =
     {
-        { 0x0B0, 0x7F0, false },
-        { 0x500, 0x700, false },
-        { CANID_ELCON_TX, 0, true },
-        { CANID_ELCON_RX, 0, true }
+        { CANID_ELCON_TX, 0x1FFFFFFF, true },
+        { CANID_ELCON_RX, 0x1FFFFFFF, true }
     };
 
-    if ((status = ConfigCanFilters(ctx->hw.can, masks, sizeof(masks)/sizeof(masks[0]))) != 0)
+    if ((status = ConfigCanFilters(ctx->hw.elcon_can, charger_masks,
+                                   sizeof(charger_masks)/sizeof(charger_masks[0]),
+                                   base_bank)) != 0)
     {
         ctx->led_state = LED_FIRMWARE_FAULT;
         return status;
     }
 
-    // Start CAN
+    if ((status = HAL_CAN_Start(ctx->hw.elcon_can)) != HAL_OK)
+    {
+        ctx->led_state = LED_FIRMWARE_FAULT;
+        return status;
+    }
+
+    if ((status = HAL_CAN_ActivateNotification(ctx->hw.elcon_can,
+                                            CAN_IT_RX_FIFO0_MSG_PENDING)) != HAL_OK)
+    {
+        ctx->led_state = LED_FIRMWARE_FAULT;
+        return status;
+    }
+
+    return status;
+}
+
+// CAN2 = vehicle bus (1M), queued TX
+int ConfigCan(DbmsCtx* ctx)
+{
+    g_can_ctx = ctx;
+    int status = 0;
+    const int base_bank = 14;
+
+    CanFilterMask masks[] =
+    {
+        { 0x0B0, 0x7F0, false },
+        { 0x500, 0x700, false }
+    };
+
+    if ((status = ConfigCanFilters(ctx->hw.can, masks,
+                                   sizeof(masks)/sizeof(masks[0]),
+                                   base_bank)) != 0)
+    {
+        ctx->led_state = LED_FIRMWARE_FAULT;
+        return status;
+    }
+
     if ((status = HAL_CAN_Start(ctx->hw.can)) != HAL_OK)
     {
         ctx->led_state = LED_FIRMWARE_FAULT;
         return status;
     }
 
-    // Enable interrupts
     if ((status = HAL_CAN_ActivateNotification(ctx->hw.can,
                                             CAN_IT_RX_FIFO0_MSG_PENDING |
                                             CAN_IT_RX_FIFO1_MSG_PENDING |
@@ -138,7 +175,6 @@ int ConfigCan(DbmsCtx* ctx)
         return status;
     }
 
-    // Configure TX header (example)
     ctx->hw.can_tx_header.StdId = 0x500;
     ctx->hw.can_tx_header.IDE = CAN_ID_STD;
     ctx->hw.can_tx_header.RTR = CAN_RTR_DATA;
@@ -154,7 +190,7 @@ static void SendFromQueue(CAN_HandleTypeDef *hcan)
     {
         CanTxQueueItem* entry = &tx_queue.buffer[tx_queue.tail];
 
-        if (entry->header.StdId == CANID_TX_DELAY) 
+        if (entry->header.StdId == CANID_TX_DELAY)
         {
             if (g_can_ctx)
                 g_can_ctx->delay.T1 = GET_US2();
@@ -183,12 +219,10 @@ static void SendFromQueue(CAN_HandleTypeDef *hcan)
     }
 }
 
-
 int CanTransmit(DbmsCtx* ctx, uint32_t id, uint8_t data[8])
 {
     CAN_TxHeaderTypeDef* hdr = &ctx->hw.can_tx_header;
 
-    // Determine if extended or standard ID
     if (id > CAN_STD_ID_MASK)
     {
         hdr->IDE = CAN_ID_EXT;
@@ -208,7 +242,7 @@ int CanTransmit(DbmsCtx* ctx, uint32_t id, uint8_t data[8])
 
     if (tx_queue.count == 0 && HAL_CAN_GetTxMailboxesFreeLevel(ctx->hw.can) > 0U)
     {
-        if (id == CANID_TX_DELAY) 
+        if (id == CANID_TX_DELAY)
         {
             ctx->delay.T1 = GET_US2();
         }
@@ -217,7 +251,6 @@ int CanTransmit(DbmsCtx* ctx, uint32_t id, uint8_t data[8])
         if (result != HAL_OK)
         {
             ctx->stats.n_tx_can_fail++;
-            // ctx->led_state = LED_COMM_ERROR;
             ctx->last_can_err = HAL_CAN_GetError(ctx->hw.can);
         }
         else
@@ -248,19 +281,61 @@ int CanTransmit(DbmsCtx* ctx, uint32_t id, uint8_t data[8])
     return HAL_OK;
 }
 
+// charger TX on CAN1, no queue
+int CanChargeTransmit(DbmsCtx* ctx, uint32_t id, uint8_t data[8])
+{
+    CAN_TxHeaderTypeDef hdr = {0};
+
+    if (id > CAN_STD_ID_MASK)
+    {
+        hdr.IDE = CAN_ID_EXT;
+        hdr.ExtId = id & CAN_EXT_ID_MASK;
+    }
+    else
+    {
+        hdr.IDE = CAN_ID_STD;
+        hdr.StdId = id & CAN_STD_ID_MASK;
+    }
+    hdr.RTR = CAN_RTR_DATA;
+    hdr.DLC = 8;
+    hdr.TransmitGlobalTime = DISABLE;
+
+    if (HAL_CAN_GetTxMailboxesFreeLevel(ctx->hw.elcon_can) == 0U)
+    {
+        ctx->stats.n_tx_can_fail++;
+        ctx->last_can_err = HAL_CAN_GetError(ctx->hw.elcon_can);
+        return HAL_BUSY;
+    }
+
+    uint32_t mailbox;
+    int32_t result = HAL_CAN_AddTxMessage(ctx->hw.elcon_can, &hdr, data, &mailbox);
+
+    if (result != HAL_OK)
+    {
+        ctx->stats.n_tx_can_fail++;
+        ctx->last_can_err = HAL_CAN_GetError(ctx->hw.elcon_can);
+        return result;
+    }
+
+    ctx->stats.n_tx_can_frames++;
+    ctx->stats.last_can_tx_ts = GetUs(ctx);
+    return HAL_OK;
+}
+
+// queue lives on CAN2 (vehicle bus); ignore CAN1 (charger) mailbox completions
 void HAL_CAN_TxMailbox0CompleteCallback(CAN_HandleTypeDef *hcan)
 {
-    SendFromQueue(hcan);
+    if (hcan->Instance == CAN2) SendFromQueue(hcan);
 }
 
 void HAL_CAN_TxMailbox1CompleteCallback(CAN_HandleTypeDef *hcan)
 {
-    SendFromQueue(hcan);
+    if (hcan->Instance == CAN2) SendFromQueue(hcan);
 }
 
 void HAL_CAN_TxMailbox2CompleteCallback(CAN_HandleTypeDef *hcan)
 {
-    SendFromQueue(hcan);
+    if (hcan->Instance == CAN2) SendFromQueue(hcan);
 }
 
 void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan)

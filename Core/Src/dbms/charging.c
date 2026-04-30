@@ -41,7 +41,7 @@ bool NeedsToBalance(DbmsCtx* ctx) // TODO: this is the start condition
 
 bool NeedsToBalanceMore(DbmsCtx* ctx)
 {
-    return 1000 * (ctx->charging.pre_bal_max_v - ctx->charging.pre_bal_min_v) > GetSetting(ctx, CH_BAL_DELTA_END);
+    return (ctx->charging.pre_bal_max_v - ctx->charging.pre_bal_min_v) > GetSetting(ctx, CH_BAL_DELTA_END);
     // && 1000 * ctx->stats.min_v > GetSetting(ctx, CH_BAL_MIN_V);
 }
 
@@ -206,7 +206,7 @@ void ChargingUpdate(DbmsCtx* ctx)
         SendElconRequest(ctx, ctx->elcon.v_req, ctx->elcon.i_req, 0);
         CanLog(ctx, "Elcon V=%d I=%d\n", ctx->elcon.v_req, ctx->elcon.i_req);
 
-        if (ctx->charging.only_balance) ChargingEnterState(ctx, CH_WAIT_1);
+        // if (ctx->charging.only_balance) ChargingEnterState(ctx, CH_WAIT_1);
         if (TIME_IN_STATE_MS(ctx) > 1000) // TODO:?
         {
             if (NeedsToBalance(ctx)) ChargingEnterState(ctx, CH_WAIT_1);

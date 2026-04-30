@@ -101,8 +101,12 @@ typedef enum
     CFG_GET
 } CanConfigAction;
 
+int ConfigElconCan(DbmsCtx* ctx);
+
 int ConfigCan(DbmsCtx* ctx);
 
 int CanTransmit(DbmsCtx* ctx, uint32_t id, uint8_t data[8]);
+
+int CanChargeTransmit(DbmsCtx* ctx, uint32_t id, uint8_t data[8]);
 
 #endif
