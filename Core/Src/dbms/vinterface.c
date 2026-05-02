@@ -195,6 +195,8 @@ int SendMetrics(DbmsCtx* ctx)
     SendMetric(ctx, 95, ctx->delay.mu);
     SendMetric(ctx, 96, ctx->delay.st_dev);
 
+    SendMetric(ctx, 97, ctx->stats.n_can_bussoffs);
+
     return 0;
 }
 
@@ -273,6 +275,7 @@ void SendPlexMetrics(DbmsCtx* ctx)
     SendPlex32x2(ctx, 0x1B, F2I_K(ctx->model.R2, 1e6), F2I_K(ctx->model.R_rc, 1e6));
     SendPlex32x2(ctx, 0x1C, F2I_K(ctx->model.R_cell, 1e6), F2I_K(ctx->model.I_lim, 1e6));
     SendPlex32x2(ctx, 0x1D, F2I_K(ctx->model.P_lim, 1e3), ctx->current_sensor.current_ma / N_P_GROUP);
+    SendPlex16x4(ctx, 0x1E, ctx->stats.n_can_bussoffs, 0, 0, 0);
 }
 
 

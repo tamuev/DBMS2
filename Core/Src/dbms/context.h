@@ -157,6 +157,7 @@ typedef struct _Stats
     uint32_t can_esr_reg;
     uint64_t last_can_bo_ts;
     uint64_t last_can_bad_ts;
+    uint16_t n_can_bussoffs;
 
     uint64_t last_monitor_msg[N_MONITORS]; // Last iter that a message was received from each monitor
 } Stats;

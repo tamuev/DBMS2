@@ -345,6 +345,7 @@ void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan)
         uint64_t t = GetUs(g_can_ctx);
         if (g_can_ctx->stats.last_can_bo_ts == 0) {
             g_can_ctx->stats.last_can_bo_ts = t;
+            g_can_ctx->stats.n_can_bussoffs++;
         }
         g_can_ctx->stats.last_can_bad_ts = t;
     }
