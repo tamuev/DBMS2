@@ -152,6 +152,12 @@ typedef struct _Stats
     uint16_t monitor_bad_crcs[N_MONITORS];
     uint16_t monitor_total_frames[N_MONITORS];
     uint64_t last_can_tx_ts;
+    uint64_t last_ivt_rx_ts;
+
+    uint32_t can_esr_reg;
+    uint64_t last_can_bo_ts;
+    uint64_t last_can_bad_ts;
+    uint16_t n_can_bussoffs;
 
     uint64_t last_monitor_msg[N_MONITORS]; // Last iter that a message was received from each monitor
 } Stats;

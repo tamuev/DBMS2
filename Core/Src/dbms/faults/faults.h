@@ -43,8 +43,16 @@ typedef enum
     CTRL_KEEP_MAX,
     CTRL_KEEP_MIN,
     CTRL_KEEP_FIRST,
-    CTRL_KEEP_LATEST
+    CTRL_KEEP_LATEST,
+    CTRL_KEEP_BITS
 } CtrlFaultSaveMode;
+
+typedef enum
+{
+    CTRL_TX_FAILS = 0,
+    CTRL_ISENSE_DC,
+    CTRL_BUSOFF
+} CtrlCANFaults;
 
 #define BIT(fault) (1U << (fault))
 

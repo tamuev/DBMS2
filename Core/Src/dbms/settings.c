@@ -82,4 +82,7 @@ void LoadFallbackSettings(DbmsCtx* ctx)
     
     ctx->settings->user_defined[QUITE_STACK_FAULT_TICKS] = 20;
     ctx->settings->user_defined[MS_BEFORE_CAN_FAIL] = 1000000;
+
+    ctx->settings->user_defined[CAN_BUSOFF_RECOVERY_MS] = 1000;
+    ctx->settings->user_defined[CAN_BUSOFF_GOOD_MS] = 100;
 }

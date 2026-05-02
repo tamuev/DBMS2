@@ -167,7 +167,9 @@ int ConfigCan(DbmsCtx* ctx)
     if ((status = HAL_CAN_ActivateNotification(ctx->hw.can,
                                             CAN_IT_RX_FIFO0_MSG_PENDING |
                                             CAN_IT_RX_FIFO1_MSG_PENDING |
-                                            CAN_IT_TX_MAILBOX_EMPTY)) != HAL_OK)
+                                            CAN_IT_TX_MAILBOX_EMPTY |
+                                            CAN_IT_ERROR |
+                                            CAN_IT_BUSOFF)) != HAL_OK)
     {
         ctx->led_state = LED_FIRMWARE_FAULT;
         return status;
@@ -334,4 +336,17 @@ void HAL_CAN_TxMailbox1CompleteCallback(CAN_HandleTypeDef *hcan)
 void HAL_CAN_TxMailbox2CompleteCallback(CAN_HandleTypeDef *hcan)
 {
     if (hcan->Instance == CAN2) SendFromQueue(hcan);
+}
+
+void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan)
+{
+    if (hcan->Instance != CAN2) return;
+    if (hcan->ErrorCode & HAL_CAN_ERROR_BOF) {
+        uint64_t t = GetUs(g_can_ctx);
+        if (g_can_ctx->stats.last_can_bo_ts == 0) {
+            g_can_ctx->stats.last_can_bo_ts = t;
+            g_can_ctx->stats.n_can_bussoffs++;
+        }
+        g_can_ctx->stats.last_can_bad_ts = t;
+    }
 }

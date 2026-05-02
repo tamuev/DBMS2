@@ -25,8 +25,8 @@ CtrlFaultSaveMode fault_save_modes[CTRL_FAULT_TYPE_COUNT] = {
     [CTRL_FAULT_MAX_DELTA_EXCEEDED] = CTRL_KEEP_MAX,
     [CTRL_FAULT_STACK_FAULT] = CTRL_KEEP_FIRST,
     [CTRL_FAULT_CURRENT_PULSE] = CTRL_KEEP_MAX,
-    [CTRL_FAULT_CAN_FAIL] = CTRL_KEEP_FIRST,
-    [CTRL_FAULT_STACK_DISCONNECT] = CTRL_KEEP_FIRST
+    [CTRL_FAULT_CAN_FAIL] = CTRL_KEEP_BITS,
+    [CTRL_FAULT_STACK_DISCONNECT] = CTRL_KEEP_BITS
 };
 
 void CtrlUpdateFaults(DbmsCtx* ctx)
@@ -76,7 +76,8 @@ void CtrlSetFault(DbmsCtx* ctx, CtrlFault fault, uint8_t cell, uint16_t value)
     FaultData* data = &ctx->faults.fault_data[fault];
 
     bool save_value = false;
-    switch (fault_save_modes[fault]) {
+    switch (fault_save_modes[fault]) 
+    {
         case CTRL_KEEP_FIRST:
             save_value = !CtrlHasStickyFault(ctx, fault);
             break;
@@ -89,8 +90,11 @@ void CtrlSetFault(DbmsCtx* ctx, CtrlFault fault, uint8_t cell, uint16_t value)
         case CTRL_KEEP_MIN:
             save_value = (value < data->value) || !CtrlHasStickyFault(ctx, fault);
             break;
+        case CTRL_KEEP_BITS:
+            save_value = (value & ~data->value);
+            data->value |= value;
+            break;
     }
-
 
     if (!CtrlHasStickyFault(ctx, fault) && data->n_throws < 255) data->n_throws++;
     if (save_value)
