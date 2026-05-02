@@ -39,6 +39,9 @@ void DbmsInit(DbmsCtx* ctx)
     ctx->flags.active = false;
     ctx->led_state = LED_INIT;
 
+    ctx->flags.dog_starved = __HAL_RCC_GET_FLAG(RCC_FLAG_IWDGRST);
+    __HAL_RCC_CLEAR_RESET_FLAGS();
+
     if ((status = LoadSettings(ctx)) != HAL_OK)
     {
         CAN_REPORT_FAULT(ctx, status);
@@ -230,6 +233,7 @@ void DbmsIter(DbmsCtx* ctx)
     int status = 0;
     ctx->stats.iters++;
     ctx->timing.iter_start_us = GetUs(ctx);
+    HAL_IWDG_Refresh(ctx->hw.iwdg);
     // ctx->profiling.profiling.times.T0 = GetUs(ctx);
 
     /**

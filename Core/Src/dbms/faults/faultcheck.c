@@ -140,4 +140,10 @@ void CheckStackFaults(DbmsCtx* ctx)
             CtrlSetFault(ctx, CTRL_FAULT_CAN_FAIL, CELL_BYTE_NA, BIT(CTRL_BUSOFF));
         }
     }
+
+    if (ctx->flags.dog_starved)
+    {
+        CtrlSetFault(ctx, CTRL_FAULT_DOG_STARVED, CELL_BYTE_NA, 0);
+        ctx->flags.dog_starved = false;
+    }
 }

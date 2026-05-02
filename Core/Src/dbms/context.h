@@ -81,6 +81,7 @@ typedef struct _HwCtx
     TIM_HandleTypeDef* timer_pwm_1;
     UART_HandleTypeDef* uart;
     I2C_HandleTypeDef* i2c;
+    IWDG_HandleTypeDef* iwdg;
 
     CAN_HandleTypeDef* elcon_can; // charger bus -- 500k
     CAN_HandleTypeDef* can; // vehicle bus -- 1m
@@ -297,6 +298,7 @@ typedef struct _Flags {
     bool has_balanced;
     bool shutdown_requested;
     bool shutdown_stack_requested;
+    bool dog_starved;
 } Flags;
 
 typedef struct _ChargeStats {

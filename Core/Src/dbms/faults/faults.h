@@ -35,6 +35,7 @@ typedef enum
     CTRL_FAULT_CURRENT_PULSE = 10,
     CTRL_FAULT_CAN_FAIL = 11,
     CTRL_FAULT_STACK_DISCONNECT = 12,
+    CTRL_FAULT_DOG_STARVED = 13,
     CTRL_FAULT_TYPE_COUNT // Total number of fault types -- should be last
 } CtrlFault;
 
