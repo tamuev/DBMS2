@@ -55,4 +55,17 @@ void SyncRealTime(DbmsCtx* ctx, uint64_t remote_ts);
 // Get the current global time
 uint64_t GetRealTime(DbmsCtx* ctx);
 
+
+/*
+ * Setup quick n dirty microseconds
+ */
+void InitGetUS2();
+
+/*
+ * Get quick n dirty  microseconds
+ */
+#define GET_US2() (DWT->CYCCNT / (SystemCoreClock / 1000000U))
+
+
+
 #endif

@@ -135,10 +135,6 @@ DATA (                      \
 
 typedef struct PACKED _TxStackFrame1Dev 
 {
-    // uint8_t     __cmd   : 1;                /* must be set to 1 */
-    // uint8_t     reqtype : 3;                /* one of REQ_* */
-    // uint8_t     __res   : 1;                /* reserved bit */
-    // uint8_t     len     : 3;   
     uint8_t     cmd;             
     uint8_t     devaddr;
     uint16_t    regaddr;
@@ -149,11 +145,7 @@ typedef struct PACKED _TxStackFrame1Dev
 } TxStackFrame1Dev;
 
 typedef struct PACKED _TxStackFrameNDev 
-{
-    // uint8_t     __cmd   : 1;                /* must be set to 1 */
-    // uint8_t     reqtype : 3;                /* one of REQ_* */
-    // uint8_t     __res   : 1;                /* reserved bit */
-    // uint8_t     len     : 3;       
+{     
     uint8_t     cmd;         
     uint16_t    regaddr;
     uint8_t     data[MAX_TX_DATA];
@@ -183,7 +175,7 @@ typedef struct PACKED _TxStackFrameNDev
 
 typedef struct PACKED _RxStackFrameVoltages
 {
-    uint8_t     init    : 7;
+    uint8_t     init;
     uint8_t     devaddr;
     uint16_t    regaddr;
     uint8_t     data[N_GROUPS_PER_SIDE * sizeof(uint16_t)];
@@ -192,7 +184,7 @@ typedef struct PACKED _RxStackFrameVoltages
 
 typedef struct PACKED _RxStackFrameTemps
 {
-    uint8_t     init    : 7;                
+    uint8_t     init; 
     uint8_t     devaddr;
     uint16_t    regaddr;
     uint8_t     data[(N_TEMPS_POLL_PER_MONITOR + 2) * sizeof(uint16_t)]; // +2 GPIO  mismatch

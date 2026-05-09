@@ -1,9 +1,9 @@
-/** 
- * 
+/**
+ *
  * Distributed BMS      CAN I/O Interface
  *
  * Copyright (C) 2025   Texas A&M University
- * 
+ *
  *                      Justus Languell  <justus@tamu.edu>
  *                      Cam Stone        <cameron28202@tamu.edu>
  *                      Abhinav Akavaram <abhinav.akavaram@tamu.edu>
@@ -57,10 +57,15 @@
 #define CANID_RX_SHUTDOWN_STACK     0x0BA
 #define CANID_RX_CLEAR_SHUTDOWN     0x0BB
 
+#define CANID_RX_DO_BAL_LOOP        0x0BE
+
 #define CANID_RX_BLACKBOX_REQUEST   0x0B006000
 #define CANID_TX_BLACKBOX           0x0B007000
 #define CANID_TX_BLACKBOX_SIZE      0x0B008000
 #define CANID_TX_BLACKBOX_READY     0x0B009000
+
+#define CANID_RX_DELAY              0x0BC
+#define CANID_TX_DELAY              0x0BD
 
 /* Extended IDs */
 
@@ -69,30 +74,39 @@
 #define CANID_CELLSTATE_BALANCE     0x0B005000
 #define CANID_METRIC                0x0B001000
 #define CANID_CONSOLE_C0            0x0B004000
+#define CANID_TX_FAULTS_MASKS1      0x0B00F010
+#define CANID_TX_FAULTS_MASKS2      0x0B00F011
+#define CANID_TX_FAULTS_MASKS3      0x0B00F012
+#define CANID_RX_FAULTS_CONFIG      0x0B00F013
+#define CANID_TX_FAULTS_DATA        0x0B00F020
 
 /* Undefined yet */
 
-#define CANID_FATAL_ERROR           0x50B 
+#define CANID_FATAL_ERROR           0x50B
 
 #define CANID_DEBUG_OVERWRITE_TEMPS     0x581
 
 #define CANID_ELCON_TX                  0x1806E5F4
 #define CANID_ELCON_RX                  0x18FF50E5
 
-typedef enum 
+typedef enum
 {
-    CAN_RX_0, 
+    CAN_RX_0,
     CAN_RX_1,
 } CanRxChannel;
 
-typedef enum 
+typedef enum
 {
     CFG_SET,
     CFG_GET
 } CanConfigAction;
 
+int ConfigElconCan(DbmsCtx* ctx);
+
 int ConfigCan(DbmsCtx* ctx);
 
 int CanTransmit(DbmsCtx* ctx, uint32_t id, uint8_t data[8]);
+
+int CanChargeTransmit(DbmsCtx* ctx, uint32_t id, uint8_t data[8]);
 
 #endif

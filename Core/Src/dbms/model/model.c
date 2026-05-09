@@ -65,12 +65,12 @@ float LookupFromZ(float z, float T_bar, float* x_t_lows, float* x_t_highs, float
     i_low = CLAMP(i_low, 0, n - 1);
     i_high = CLAMP(i_high, 0, n - 1);
 
-    float a = x_t_highs[i_low];
-    float b = x_t_highs[i_high];
-    float x_t_low = (b-a) * i_k + a;      // why the mismatch?
+    float a = x_t_lows[i_low];
+    float b = x_t_lows[i_high];
+    float x_t_low = (b-a) * i_k + a;
 
-    a = x_t_lows[i_high];
-    b = x_t_lows[i_low];
+    a = x_t_highs[i_low];
+    b = x_t_highs[i_high];
     float x_t_high = (b-a) * i_k + a;
 
     return (x_t_high - x_t_low) * 
@@ -120,7 +120,7 @@ void ComputeModel(Model* m, float T_bar, float I, float Q0, float Qd, float V_pa
     float Q_max_oc = F_Q_max(T_bar, Q_BOUND_H_OC, Q_BOUND_L_OC);
     m->z_oc = F_Z(m->Q, Q_max_oc);
     m->V_oc = F_OCV(m->z_oc, T_bar);
-    if (I > 0) 
+    if (I > MIN_OC_I)
     {
         m->R_oc = F_DCIR(m->V_oc, V_pack, I);
     }
@@ -138,6 +138,8 @@ void ComputeModel(Model* m, float T_bar, float I, float Q0, float Qd, float V_pa
     m->R_cell = (MAX(m->R_oc, m->R_rc));
 
     m->I_lim = F_I_Limit(V_min, V_dyn_min, m->R_cell);
+
+    m->P_lim = m->I_lim * V_min;
 }
 
 

@@ -72,7 +72,7 @@ void PopulateBlackboxInfo(DbmsCtx* ctx, Snapshot* blackbox)
         blackbox->avg_voltage = ctx->stats.avg_v;
 
         // Faults
-        blackbox->controller_mask = ctx->faults.controller_mask;
+        blackbox->controller_mask = ctx->faults.active_faults;
         blackbox->bridge_fault_summary = ctx->faults.bridge_fault_summary;
         blackbox->bridge_faults = ctx->faults.bridge_faults;
         memcpy(blackbox->monitor_fault_summary, ctx->faults.monitor_fault_summary, N_MONITORS);
