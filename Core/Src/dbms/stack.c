@@ -183,7 +183,7 @@ void StackReverseCommDir(DbmsCtx* ctx, bool reverse_direction)
 void SendReverseAutoAddr(DbmsCtx* ctx)
 {
     // uint8_t frame_addr_dev[] = {0xD0, 0x03, 0x07, 0x00, 0x00, 0x00};
-    BROADCAST_WRITE(ctx, 0x309, DATA(0x81));
+    // BROADCAST_WRITE(ctx, 0x309, DATA(0x81));
     HAL_Delay(1);
     for (int i = 0; i <= N_STACKDEVS; i++)
     {

@@ -284,11 +284,11 @@ void DbmsIter(DbmsCtx* ctx)
         PeriodicSaveQStats(ctx);
     }
 
-    // StackReverseAutoAddr(ctx);
+    StackReverseAutoAddr(ctx);
     if (!ctx->in)
     {
     HAL_Delay(5);
-        // StackReverseCommDir(ctx, true);
+        StackReverseCommDir(ctx, true);
             HAL_Delay(5);
 
     }
