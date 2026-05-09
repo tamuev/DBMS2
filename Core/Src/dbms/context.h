@@ -35,8 +35,8 @@
 #define N_STACKDEVS (N_MONITORS + 1) // technically "bus devs"
 #define N_TEMPS_POLL_PER_MONITOR ((N_TEMPS_PER_MONITOR / 4) + 1) // Mux boards
 
-#define ADDR_BCAST_TO_STACK(BCAST_ADDR) (BCAST_ADDR + 1)
-#define ADDR_STACK_TO_BCAST(CTX, STACK_ADDR) (CTX->stack_dir ? STACK_ADDR + N_STACKDEVS + 1 : STACK_ADDR + 1)
+#define ADDR_BCAST_TO_STACK(BCAST_ADDR) ((BCAST_ADDR % N_STACKDEVS) - 1) 
+#define ADDR_STACK_TO_BCAST(STACK_ADDR) ((STACK_ADDR % N_STACKDEVS) + 1)
 
 #define CELL_BYTE_NA 0xFF
 #define CELL_BYTE(side, cell) ((((side) & 0xF) << 4) | ((cell) & 0xF))

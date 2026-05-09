@@ -575,7 +575,7 @@ void StackSetDeviceBalanceTimers(DbmsCtx* ctx, uint8_t side, bool odds, StackBal
         uint16_t reg_addr = base_reg - i; // registers decrement
         uint8_t timer_val = i % 2 == odds && cells_to_bal[i] ? bal_time : 0x00;
         
-        SINGLE_DEV_WRITE(ctx, ADDR_STACK_TO_BCAST(ctx, side), reg_addr, DATA(timer_val));
+        SINGLE_DEV_WRITE(ctx, ADDR_STACK_TO_BCAST(side), reg_addr, DATA(timer_val));
         HAL_Delay(2);  // small delay between writes
     }
 }
@@ -592,7 +592,7 @@ void StackStartBalancing(DbmsCtx* ctx, bool odds, int32_t bal_time)
 {
     for(size_t side = 0; side < N_SIDES; ++side)
     {
-        uint8_t dev_addr = ADDR_STACK_TO_BCAST(ctx, side);
+        uint8_t dev_addr = ADDR_STACK_TO_BCAST(side);
         StackSetDeviceBalanceTimers(ctx, side, odds, bal_time);
         StackStartDeviceBalancing(ctx, dev_addr);
     }
