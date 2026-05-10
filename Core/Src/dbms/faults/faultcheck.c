@@ -108,6 +108,7 @@ void CheckStackFaults(DbmsCtx* ctx)
     if (disconnected_mask != 0)
     {
         CtrlSetFault(ctx, CTRL_FAULT_STACK_DISCONNECT, CELL_BYTE_NA, disconnected_mask);
+        SetSetting(ctx, STACK_REVERSAL_SWITCHING_MS, 10000);
         CanLog(ctx, "dm=%x\n", disconnected_mask);
     }
 

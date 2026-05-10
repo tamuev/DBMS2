@@ -208,7 +208,7 @@ void StackAutoAddr(DbmsCtx* ctx);
 void StackReverseAutoAddr(DbmsCtx* ctx);
 void StackReverseCommDir(DbmsCtx* ctx, bool reverse_direction);
 void SendReverseAutoAddr(DbmsCtx* ctx);
-
+void SendSetStackTopManual(DbmsCtx* ctx, int devaddr);
 
 /**
  * @brief Set the number of active cells in the stack

@@ -134,6 +134,19 @@ void SendSetStackTop(DbmsCtx* ctx)
     HAL_Delay(1);
 }
 
+void SendSetStackTopManual(DbmsCtx* ctx, int devaddr)
+{
+    // Sets all devices as stack devices
+    BROADCAST_WRITE(ctx, REG_COMM_CTRL, DATA(COMM_STACK_DEV));
+    HAL_Delay(1);
+    // Sets bridge device as non-stack device and bottom of stack
+    SINGLE_DEV_WRITE(ctx, 0, REG_COMM_CTRL, DATA(0x00));
+    HAL_Delay(1);
+    // Sets top of stack
+    SINGLE_DEV_WRITE(ctx, ADDR_STACK_TO_BCAST(ctx, devaddr), REG_COMM_CTRL, DATA(COMM_STACK_DEV | COMM_TOP_STACK));
+    HAL_Delay(1);
+}
+
 void ReadOtpEccDatain(DbmsCtx* ctx)
 {
     for (int i = 0; i < 8; i++)
@@ -194,7 +207,21 @@ void StackReverseCommDir(DbmsCtx* ctx, bool direction)
     HAL_Delay(1);
     // static uint8_t FRAME_ENABLE_REVERSE_AUTO_ADDR[] = {0xD0, 0x03, 0x09, 0x81, 0x0F, 0x74};
     // BROADCAST_WRITE(ctx, 0x309, DATA(dir));
-    SendSetStackTop(ctx);
+    if (!CtrlHasFault(ctx, CTRL_FAULT_STACK_DISCONNECT)) SendSetStackTop(ctx);
+    else{
+        int break_loc;
+        uint16_t monitor_bitmask = ctx->faults.fault_data[CTRL_FAULT_STACK_DISCONNECT].value;
+        for (break_loc = 0; break_loc < N_MONITORS; break_loc++)
+        {
+            if (monitor_bitmask % 2 != 0) break;
+            monitor_bitmask = monitor_bitmask >> 1;
+        }
+        if (break_loc == 0) SendSetStackTop(ctx);
+        else
+        {
+            SendSetStackTopManual(ctx, break_loc - 1);
+        }
+    }
     ctx->stack_dir = direction;
     ctx->stack_dir_change_ts = GetUs(ctx);
 }
@@ -254,7 +281,6 @@ void StackUpdateAllVoltReadings(DbmsCtx* ctx)
     size_t expected_rx_size = RX_FRAME_SIZE(data_size) * N_MONITORS;
 
     StackRead(ctx, rx_buffer_v, STACK_V_REG_START, data_size, expected_rx_size);
-
     for (size_t i = 0; i < N_MONITORS; i++)
     {
         IncStackCrcStats(ctx, true, i);
@@ -350,7 +376,7 @@ void UpdateVoltages(DbmsCtx* ctx, RxStackFrameVoltages* frame)
 {
     if (ADDR_BCAST_TO_STACK(ctx, frame->devaddr) >= N_MONITORS) return;
 
-    ctx->stats.last_monitor_msg[(ctx, frame->devaddr)] = ctx->stats.iters;
+    ctx->stats.last_monitor_msg[ADDR_BCAST_TO_STACK(ctx, frame->devaddr)] = ctx->stats.iters;
     for (size_t j = 0; j < N_GROUPS_PER_SIDE; j++)
     {
         uint16_t raw = (frame->data[j * sizeof(int16_t)] << 8) + frame->data[j * sizeof(int16_t) + 1];

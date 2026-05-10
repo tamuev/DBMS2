@@ -188,8 +188,22 @@ void DbmsHandleActive(DbmsCtx* ctx)
     HAL_Delay(5);
     if (ctx->stats.iters < 3) StackReverseAutoAddr(ctx); // For some reason needs to be run a few times on startup
     HAL_Delay(5);
-    if (!ctx->stack_dir && GetUs(ctx) - ctx->stack_dir_change_ts > 1000000) StackReverseCommDir(ctx, true);
-    else if (ctx->stack_dir && GetUs(ctx) - ctx->stack_dir_change_ts > 1000000) StackReverseCommDir(ctx, false);
+    if (!ctx->stack_dir && GetUs(ctx) - ctx->stack_dir_change_ts > GetSetting(ctx, STACK_REVERSAL_SWITCHING_MS))
+    {
+        StackReverseCommDir(ctx, true);
+        if (ctx->flags.active)
+        {
+            MonitorLedBlink(ctx);
+        }
+    }
+    else if (ctx->stack_dir && GetUs(ctx) - ctx->stack_dir_change_ts > GetSetting(ctx, STACK_REVERSAL_SWITCHING_MS))
+    {
+        StackReverseCommDir(ctx, false);
+        if (ctx->flags.active)
+        {
+            MonitorLedBlink(ctx);
+        }
+    } 
     StackUpdateAllVoltReadings(ctx);
     HAL_Delay(10);
     ctx->profiling.times.T1 = GetUs(ctx);
@@ -420,7 +434,7 @@ void DbmsIter(DbmsCtx* ctx)
     ProcessLedAction(ctx);
 
     if (ctx->flags.active) {
-        MonitorLedBlink(ctx);
+        // MonitorLedBlink(ctx);
     }
 
     // float oa1, oa2, ob1, ob2 = 0;

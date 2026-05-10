@@ -85,4 +85,6 @@ void LoadFallbackSettings(DbmsCtx* ctx)
 
     ctx->settings->user_defined[CAN_BUSOFF_RECOVERY_MS] = 1000;
     ctx->settings->user_defined[CAN_BUSOFF_GOOD_MS] = 100;
+
+    ctx->settings->user_defined[STACK_REVERSAL_SWITCHING_MS] = 1000000;
 }
