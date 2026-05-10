@@ -403,7 +403,6 @@ typedef struct _DbmsCtx
 
     bool stack_dir;
     uint64_t stack_dir_change_ts;
-    bool revautoaddr;
 } DbmsCtx;
 
 

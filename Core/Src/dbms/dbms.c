@@ -113,7 +113,6 @@ int DbmsPerformWakeup(DbmsCtx* ctx)
     }
     ctx->stack_dir = true;
     ctx->stack_dir_change_ts = 0;
-    ctx->revautoaddr = false;
     HAL_Delay(5);
     StackAutoAddr(ctx);
     HAL_Delay(5);
@@ -188,8 +187,9 @@ void DbmsHandleActive(DbmsCtx* ctx)
     ctx->profiling.times.T0 = GetUs(ctx);
     HAL_Delay(5);
     if (ctx->stats.iters < 3) StackReverseAutoAddr(ctx); // For some reason needs to be run a few times on startup
-    HAL_Delay(50);
-    StackReverseCommDir(ctx, false);
+    HAL_Delay(5);
+    if (!ctx->stack_dir && GetUs(ctx) - ctx->stack_dir_change_ts > 1000000) StackReverseCommDir(ctx, true);
+    else if (ctx->stack_dir && GetUs(ctx) - ctx->stack_dir_change_ts > 1000000) StackReverseCommDir(ctx, false);
     StackUpdateAllVoltReadings(ctx);
     HAL_Delay(10);
     ctx->profiling.times.T1 = GetUs(ctx);

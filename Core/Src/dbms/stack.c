@@ -180,11 +180,12 @@ void StackReverseAutoAddr(DbmsCtx* ctx)
     SendSetStackTop(ctx); // Send stack top and bottom according to set addresses and direction
     HAL_Delay(1);
     ctx->stack_dir = false;
+    ctx->stack_dir_change_ts = GetUs(ctx);
 }
 
-void StackReverseCommDir(DbmsCtx* ctx, bool reverse_direction)
+void StackReverseCommDir(DbmsCtx* ctx, bool direction)
 {
-    uint8_t dir = reverse_direction ? 0x80 : 0x00;
+    uint8_t dir = direction ? 0x00 : 0x80;
     // uint8_t frame_change_base_dev_dir[] = {0x90, 0x00, 0x03, 0x09, dir, 0x00, 0x00};
     SINGLE_DEV_WRITE(ctx, 0x00, 0x309, DATA(dir));       
     // uint8_t frame_reverse_broadcast_dir[] = {0xE0, 0x30, 0x09, 0x80, 0x00, 0x00};
@@ -194,6 +195,8 @@ void StackReverseCommDir(DbmsCtx* ctx, bool reverse_direction)
     // static uint8_t FRAME_ENABLE_REVERSE_AUTO_ADDR[] = {0xD0, 0x03, 0x09, 0x81, 0x0F, 0x74};
     // BROADCAST_WRITE(ctx, 0x309, DATA(dir));
     SendSetStackTop(ctx);
+    ctx->stack_dir = direction;
+    ctx->stack_dir_change_ts = GetUs(ctx);
 }
 
 void SendReverseAutoAddr(DbmsCtx* ctx)
