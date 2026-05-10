@@ -56,7 +56,7 @@ void PopulateBlackboxInfo(DbmsCtx* ctx, Snapshot* blackbox)
         // Current limits and resistance
         blackbox->current_limit_a = ctx->model.I_lim;
         blackbox->dcir = ctx->model.R_cell;
-        blackbox->total_resistance = ctx->model.R0 + ctx->model.R1 + ctx->model.R2;
+        blackbox->total_resistance = ctx->model.R_rc;
 
         // Temperature stats
         blackbox->avg_temp = ctx->stats.avg_t;

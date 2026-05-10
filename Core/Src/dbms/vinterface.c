@@ -124,9 +124,9 @@ int SendMetrics(DbmsCtx* ctx)
     SendMetric(ctx, 24, F2I_K(ctx->model.V_oc, 1e6));
     SendMetric(ctx, 25, F2I_K(ctx->model.R_oc, 1e6));
     SendMetric(ctx, 26, F2I_K(ctx->model.z_rc, 1e6));
-    SendMetric(ctx, 27, F2I_K(ctx->model.R0, 1e6));
-    SendMetric(ctx, 28, F2I_K(ctx->model.R1, 1e6));
-    SendMetric(ctx, 29, F2I_K(ctx->model.R2, 1e6));
+    SendMetric(ctx, 27, F2I_K(ctx->model.R_rc, 1e6));
+    SendMetric(ctx, 28, 0);
+    SendMetric(ctx, 29, 0);
     SendMetric(ctx, 30, F2I_K(ctx->model.R_rc, 1e6));
     SendMetric(ctx, 31, F2I_K(ctx->model.R_cell, 1e6));
     SendMetric(ctx, 32, F2I_K(ctx->model.I_lim, 1e6));
@@ -271,8 +271,8 @@ void SendPlexMetrics(DbmsCtx* ctx)
 
     SendPlex32x2(ctx, 0x18, F2I_K(ctx->model.Q, 1e6), F2I_K(ctx->model.z_rc, 1e6));
     SendPlex32x2(ctx, 0x19, F2I_K(ctx->model.V_oc, 1e6), F2I_K(ctx->model.R_oc, 1e6));
-    SendPlex32x2(ctx, 0x1A, F2I_K(ctx->model.R0, 1e6), F2I_K(ctx->model.R1, 1e6));
-    SendPlex32x2(ctx, 0x1B, F2I_K(ctx->model.R2, 1e6), F2I_K(ctx->model.R_rc, 1e6));
+    SendPlex32x2(ctx, 0x1A, F2I_K(ctx->model.R_rc, 1e6), 0);
+    SendPlex32x2(ctx, 0x1B, 0, F2I_K(ctx->model.R_rc, 1e6));
     SendPlex32x2(ctx, 0x1C, F2I_K(ctx->model.R_cell, 1e6), F2I_K(ctx->model.I_lim, 1e6));
     SendPlex32x2(ctx, 0x1D, F2I_K(ctx->model.P_lim, 1e3), ctx->current_sensor.current_ma / N_P_GROUP);
     SendPlex16x4(ctx, 0x1E, ctx->stats.n_can_bussoffs, 0, 0, 0);

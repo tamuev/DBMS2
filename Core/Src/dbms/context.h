@@ -42,8 +42,9 @@
 #define CELL_BYTE(side, cell) ((((side) & 0xF) << 4) | ((cell) & 0xF))
 
 #define N_THERM_V_TO_T_ENTRIES      121
+#define N_TEMPS                     5
 #define N_OCV_ENTRIES               201
-#define N_RC_ENTRIES                101
+#define N_DCIR_ENTRIES              201
 #define N_C_ENTRIES                 101
 #define N_I_MA_MEMORIZED            100
 
@@ -170,9 +171,6 @@ typedef struct _Model   // Outputs from the ECM model
     float V_oc;         // Open Circuit Voltage
     float R_oc;
 
-    float R0;
-    float R1;
-    float R2;
     float R_rc;
 
     float R_cell;

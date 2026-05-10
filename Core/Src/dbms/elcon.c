@@ -37,5 +37,5 @@ void SendElconRequest(DbmsCtx* ctx, int16_t v_req, int16_t i_req, bool en)
     frame[2] = (i_req >> 8) & 0xFF;
     frame[3] = i_req & 0xFF;
     frame[4] = en;
-    int err = CanChargeTransmit(ctx, CANID_ELCON_TX, frame);
+    CanChargeTransmit(ctx, CANID_ELCON_TX, frame);
 }
