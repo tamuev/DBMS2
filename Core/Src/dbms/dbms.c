@@ -111,7 +111,7 @@ int DbmsPerformWakeup(DbmsCtx* ctx)
         ctx->led_state = LED_FIRMWARE_FAULT;
         return status; // we are cooked
     }
-    ctx->stack_dir = false;
+    ctx->stack_dir = true;
     ctx->stack_dir_change_ts = 0;
     ctx->revautoaddr = false;
     HAL_Delay(5);
@@ -129,7 +129,6 @@ int DbmsPerformWakeup(DbmsCtx* ctx)
     StackBalancingConfig(ctx);
 
     HAL_Delay(5);
-    // StackReverseAutoAddr(ctx);
 
     ctx->current_sensor.q_offset = 0.0f;
     ctx->current_sensor.has_q_offset = false;
@@ -187,7 +186,10 @@ void DbmsHandleActive(DbmsCtx* ctx)
 {
     if (!ctx->flags.active) return;
     ctx->profiling.times.T0 = GetUs(ctx);
-
+    HAL_Delay(5);
+    if (ctx->stats.iters < 3) StackReverseAutoAddr(ctx); // For some reason needs to be run a few times on startup
+    HAL_Delay(50);
+    StackReverseCommDir(ctx, false);
     StackUpdateAllVoltReadings(ctx);
     HAL_Delay(10);
     ctx->profiling.times.T1 = GetUs(ctx);
@@ -283,24 +285,23 @@ void DbmsIter(DbmsCtx* ctx)
         PeriodicSaveQStats(ctx);
     }
 
-    // StackReverseAutoAddr(ctx);
-    if (!ctx->stack_dir && GetUs(ctx) - ctx->stack_dir_change_ts > 100000)
-    {
-        if (ctx->stats.iters > 10 && !ctx->revautoaddr) 
-        {
-            // SendReverseAutoAddr(ctx);
-            ctx->revautoaddr = true;
-        }
-        // StackReverseCommDir(ctx, true);
-        HAL_Delay(5);
-        ctx->stack_dir = true;
-        ctx->stack_dir_change_ts = GetUs(ctx);
-    }
-    else if (ctx->stack_dir && GetUs(ctx) - ctx->stack_dir_change_ts > 100000)
-    {
-        ctx->stack_dir = false;
-        ctx->stack_dir_change_ts = GetUs(ctx); 
-    }
+    // if (!ctx->stack_dir && GetUs(ctx) - ctx->stack_dir_change_ts > 100000)
+    // {
+    //     if (ctx->stats.iters > 10 && !ctx->revautoaddr) 
+    //     {
+    //         // SendReverseAutoAddr(ctx);
+    //         ctx->revautoaddr = true;
+    //     }
+        // StackReverseCommDir(ctx, false);
+    //     HAL_Delay(5);
+    //     ctx->stack_dir = true;
+    //     ctx->stack_dir_change_ts = GetUs(ctx);
+    // }
+    // else if (ctx->stack_dir && GetUs(ctx) - ctx->stack_dir_change_ts > 100000)
+    // {
+    //     ctx->stack_dir = false;
+    //     ctx->stack_dir_change_ts = GetUs(ctx); 
+    // }
 
     // Let everybody know that we are alive
     CanTxHeartbeat(ctx, CalcCrc16((uint8_t*)ctx->settings, sizeof(DbmsSettings)));

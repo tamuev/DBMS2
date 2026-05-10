@@ -114,7 +114,7 @@ void SendOtpEccDatain(DbmsCtx* ctx)
 
 void SendAutoAddr(DbmsCtx* ctx)
 {    
-    for (int i = 0; i <= N_STACKDEVS; i++)
+    for (int i = 0; i < N_STACKDEVS; i++)
     {
         BROADCAST_WRITE(ctx, REG_DIR0_ADDR, DATA(0x00 + i));
         HAL_Delay(1);
@@ -168,36 +168,32 @@ void StackReverseAutoAddr(DbmsCtx* ctx)
     // uint8_t frame_change_base_dev_dir[] = {0x90, 0x30, 0x09, 0x80, 0x00, 0x00};
     // SendStackFrameSetCrc(ctx, frame_change_base_dev_dir, sizeof(frame_change_base_dev_dir));
     SINGLE_DEV_WRITE(ctx, 0x00, 0x309, DATA(0x80)); // change base device direction
-    CanLog(ctx, "sdc");
     // uint8_t frame_reverse_broadcast_dir[] = {0xE0, 0x30, 0x09, 0x80, 0x00, 0x00};
+    HAL_Delay(1);
     BROADCAST_REV_WRITE(ctx, 0x309, DATA(0x80)); // change all devices direction
     HAL_Delay(1);
-    CanLog(ctx, "br");
     // static uint8_t FRAME_ENABLE_REVERSE_AUTO_ADDR[] = {0xD0, 0x03, 0x09, 0x81, 0x0F, 0x74};
     BROADCAST_WRITE(ctx, 0x309, DATA(0x81)); // enable address writing while keeping direction reversed
-    CanLog(ctx, "ea");
-    SendReverseAutoAddr(ctx); // Send reverse address N_STACKDEVS + 1 -> N_STACKDEVS * 2 + 1
-    CanLog(ctx, "addresses");
+    HAL_Delay(1);
+    SendReverseAutoAddr(ctx); // Send reverse address N_STACKDEVS -> N_STACKDEVS * 2
+    HAL_Delay(1);
     SendSetStackTop(ctx); // Send stack top and bottom according to set addresses and direction
-    CanLog(ctx, "tos");
+    HAL_Delay(1);
+    ctx->stack_dir = false;
 }
 
 void StackReverseCommDir(DbmsCtx* ctx, bool reverse_direction)
 {
-    if (ctx->stack_dir && reverse_direction) return;
-    CanLog(ctx, "cd");
     uint8_t dir = reverse_direction ? 0x80 : 0x00;
     // uint8_t frame_change_base_dev_dir[] = {0x90, 0x00, 0x03, 0x09, dir, 0x00, 0x00};
-    SINGLE_DEV_WRITE(ctx, 0x00, 0x309, DATA(dir));
-    CanLog(ctx, "sdc");
+    SINGLE_DEV_WRITE(ctx, 0x00, 0x309, DATA(dir));       
     // uint8_t frame_reverse_broadcast_dir[] = {0xE0, 0x30, 0x09, 0x80, 0x00, 0x00};
+    HAL_Delay(1);
     BROADCAST_REV_WRITE(ctx, 0x309, DATA(dir));
     HAL_Delay(1);
-    CanLog(ctx, "br");
     // static uint8_t FRAME_ENABLE_REVERSE_AUTO_ADDR[] = {0xD0, 0x03, 0x09, 0x81, 0x0F, 0x74};
-    BROADCAST_WRITE(ctx, 0x309, DATA(dir));
+    // BROADCAST_WRITE(ctx, 0x309, DATA(dir));
     SendSetStackTop(ctx);
-    CanLog(ctx, "tos");
 }
 
 void SendReverseAutoAddr(DbmsCtx* ctx)
@@ -205,7 +201,7 @@ void SendReverseAutoAddr(DbmsCtx* ctx)
     // uint8_t frame_addr_dev[] = {0xD0, 0x03, 0x07, 0x00, 0x00, 0x00};
     // BROADCAST_WRITE(ctx, 0x309, DATA(0x81));
     HAL_Delay(1);
-    for (int i = N_STACKDEVS+1; i <= N_STACKDEVS*2+1; i++)
+    for (int i = 0; i < N_STACKDEVS; i++)
     {
         BROADCAST_WRITE(ctx, 0x307, DATA(i));
         HAL_Delay(1);
@@ -342,21 +338,20 @@ void UpdateTemps(DbmsCtx* ctx, RxStackFrameTemps* frame)
     for (size_t j = 0; j < temps; j++)
     {
         uint16_t raw = (moved_data[j * sizeof(int16_t)] << 8) + moved_data[j * sizeof(int16_t) + 1];
-        ctx->cell_states[ADDR_BCAST_TO_STACK(frame->devaddr)].temps[N_TEMPS_POLL_PER_MONITOR*j + offset] = 
+        ctx->cell_states[ADDR_BCAST_TO_STACK(ctx, frame->devaddr)].temps[N_TEMPS_POLL_PER_MONITOR*j + offset] = 
             ThermVoltToTemp(ctx, MAX(0, raw * STACK_T_UV_PER_BIT / 1000000.0));
     }
 }
 
 void UpdateVoltages(DbmsCtx* ctx, RxStackFrameVoltages* frame)
 {
-    if (ADDR_BCAST_TO_STACK(frame->devaddr) >= N_MONITORS) return;
+    if (ADDR_BCAST_TO_STACK(ctx, frame->devaddr) >= N_MONITORS) return;
 
-    ctx->stats.last_monitor_msg[ADDR_BCAST_TO_STACK(frame->devaddr)] = ctx->stats.iters;
-
+    ctx->stats.last_monitor_msg[(ctx, frame->devaddr)] = ctx->stats.iters;
     for (size_t j = 0; j < N_GROUPS_PER_SIDE; j++)
     {
         uint16_t raw = (frame->data[j * sizeof(int16_t)] << 8) + frame->data[j * sizeof(int16_t) + 1];
-        ctx->cell_states[ADDR_BCAST_TO_STACK(frame->devaddr)].voltages[N_GROUPS_PER_SIDE - j - 1] = (raw * STACK_V_UV_PER_BIT) / 1000.0; // floating mV
+        ctx->cell_states[ADDR_BCAST_TO_STACK(ctx, frame->devaddr)].voltages[N_GROUPS_PER_SIDE - j - 1] = (raw * STACK_V_UV_PER_BIT) / 1000.0; // floating mV
     }
 }
 
@@ -575,7 +570,7 @@ void StackSetDeviceBalanceTimers(DbmsCtx* ctx, uint8_t side, bool odds, StackBal
         uint16_t reg_addr = base_reg - i; // registers decrement
         uint8_t timer_val = i % 2 == odds && cells_to_bal[i] ? bal_time : 0x00;
         
-        SINGLE_DEV_WRITE(ctx, ADDR_STACK_TO_BCAST(side), reg_addr, DATA(timer_val));
+        SINGLE_DEV_WRITE(ctx, ADDR_STACK_TO_BCAST(ctx, side), reg_addr, DATA(timer_val));
         HAL_Delay(2);  // small delay between writes
     }
 }
@@ -592,7 +587,7 @@ void StackStartBalancing(DbmsCtx* ctx, bool odds, int32_t bal_time)
 {
     for(size_t side = 0; side < N_SIDES; ++side)
     {
-        uint8_t dev_addr = ADDR_STACK_TO_BCAST(side);
+        uint8_t dev_addr = ADDR_STACK_TO_BCAST(ctx, side);
         StackSetDeviceBalanceTimers(ctx, side, odds, bal_time);
         StackStartDeviceBalancing(ctx, dev_addr);
     }

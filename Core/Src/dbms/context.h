@@ -19,7 +19,7 @@
 
 #define SPLIT_STACK_OPS     1       // 1 = divide stack ops in half, every-other-iter, 0 = do not
 
-#define N_SEGMENTS          1       // number of segments in the stack
+#define N_SEGMENTS          5       // number of segments in the stack
 #define N_SIDES_PER_SEG     2       // number of sides per segment
 #define N_MONITORS_PER_SIDE 1       // number of monitors per side
 #define N_GROUPS_PER_SIDE   13      // number of voltages per side
@@ -35,8 +35,8 @@
 #define N_STACKDEVS (N_MONITORS + 1) // technically "bus devs"
 #define N_TEMPS_POLL_PER_MONITOR ((N_TEMPS_PER_MONITOR / 4) + 1) // Mux boards
 
-#define ADDR_BCAST_TO_STACK(BCAST_ADDR) ((BCAST_ADDR % N_STACKDEVS) - 1) 
-#define ADDR_STACK_TO_BCAST(STACK_ADDR) ((STACK_ADDR % N_STACKDEVS) + 1)
+#define ADDR_BCAST_TO_STACK(CTX, BCAST_ADDR) (CTX->stack_dir ? BCAST_ADDR - 1 : N_STACKDEVS - BCAST_ADDR - 1) 
+#define ADDR_STACK_TO_BCAST(CTX, STACK_ADDR) (CTX->stack_dir ? STACK_ADDR + 1 : N_STACKDEVS - STACK_ADDR + 1)
 
 #define CELL_BYTE_NA 0xFF
 #define CELL_BYTE(side, cell) ((((side) & 0xF) << 4) | ((cell) & 0xF))
