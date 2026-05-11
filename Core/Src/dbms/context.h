@@ -333,9 +333,6 @@ typedef struct _FaultState {
 
     FaultData fault_data[32];
 
-    uint8_t bridge_fault_summary;
-    uint32_t bridge_faults;
-    uint8_t monitor_fault_summary[N_MONITORS];
     bool had_fault;
 } FaultState;
 

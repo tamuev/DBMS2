@@ -99,10 +99,12 @@ void CheckCurrentFaults(DbmsCtx* ctx)
 void CheckStackFaults(DbmsCtx* ctx) 
 {
     uint16_t disconnected_mask = 0;
+    uint16_t monitor_fault_mask = 0;
     for (int i = 0; i < N_MONITORS; ++i)
     {
         if (ctx->stats.iters - ctx->stats.last_monitor_msg[i] > GetSetting(ctx, QUITE_STACK_FAULT_TICKS))
             disconnected_mask |= BIT(i);
+        if (ctx->monitor_faults[i].summary & ~GetSetting(ctx, MONITOR_FAULT_MASK) != 0) monitor_fault_mask |= BIT(i);
     }
 
     if (disconnected_mask != 0)
