@@ -271,7 +271,7 @@ typedef struct _MonitorFaults {
     uint8_t sys;
     uint8_t prot[2];
     uint8_t pwr[3];
-} MonitorFaults
+} MonitorFaults;
 
 typedef struct _ChargeStats {
     float initial;

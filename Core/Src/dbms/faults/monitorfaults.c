@@ -25,7 +25,7 @@ void PollFaultSummary(DbmsCtx* ctx)
     {
         IncStackCrcStats(ctx, true, i);
         // TODO: test without on new battery to see if this is necessary
-        uint8_t* data = rx_buffer_v + (i * RX_FRAME_SIZE(data_size));
+        uint8_t* data = raw + (i * RX_FRAME_SIZE(data_size));
         for (int j = 0; (data[0] != (FAULT_SUMMARY_REG & 0xFF)) && (j < 1024); j++) { data++; }
         
         RxStackFrameVoltages* clean_frame = (RxStackFrameVoltages*)(data - 3);
@@ -34,4 +34,5 @@ void PollFaultSummary(DbmsCtx* ctx)
         else
             IncStackCrcStats(ctx, false, i);
         CanLog(ctx, "fs: %d", ctx->monitor_faults[clean_frame->devaddr].summary);
+    }
 }

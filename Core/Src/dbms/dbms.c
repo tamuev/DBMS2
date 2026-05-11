@@ -12,6 +12,7 @@
 #include "dbms.h"
 #include "context.h"
 #include "faults/faults.h"
+#include "faults/monitorfaults.h"
 #include "ledctl.h"
 #include "can.h"
 #include "blackbox.h"
@@ -187,9 +188,9 @@ void DbmsHandleActive(DbmsCtx* ctx)
     
     StackUpdateAllTempReadings(ctx);
     HAL_Delay(10);
-    uint8_t raw[1024];
-    StackRead(ctx, raw, 0x52D, 1, 1);
-    CanLog(ctx, "fsum: %d", raw[4]);
+    
+    PollFaultSummary(ctx);
+    HAL_Delay(10);
     ctx->profiling.times.T2 = GetUs(ctx);
     ctx->profiling.times.T3 = GetUs(ctx);
 

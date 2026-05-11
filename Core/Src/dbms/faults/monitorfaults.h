@@ -28,3 +28,5 @@ void PollSYS(DbmsCtx* ctx);
 void PollPWR(DbmsCtx* ctx);
 
 void CheckFaultSummary(DbmsCtx* ctx);
+
+#endif
