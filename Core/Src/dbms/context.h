@@ -403,6 +403,7 @@ typedef struct _DbmsCtx
 
     bool stack_dir;
     uint64_t stack_dir_change_ts;
+    bool stack_readdressed;
 } DbmsCtx;
 
 

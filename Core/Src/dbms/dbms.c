@@ -113,6 +113,7 @@ int DbmsPerformWakeup(DbmsCtx* ctx)
     }
     ctx->stack_dir = true;
     ctx->stack_dir_change_ts = 0;
+    ctx->stack_readdressed = false;
     HAL_Delay(5);
     StackAutoAddr(ctx);
     HAL_Delay(5);
@@ -128,6 +129,7 @@ int DbmsPerformWakeup(DbmsCtx* ctx)
     StackBalancingConfig(ctx);
 
     HAL_Delay(5);
+    // StackReaddress(ctx);
 
     ctx->current_sensor.q_offset = 0.0f;
     ctx->current_sensor.has_q_offset = false;
@@ -204,6 +206,7 @@ void DbmsHandleActive(DbmsCtx* ctx)
             MonitorLedBlink(ctx);
         }
     } 
+    MonitorLedBlink(ctx);
     StackUpdateAllVoltReadings(ctx);
     HAL_Delay(10);
     ctx->profiling.times.T1 = GetUs(ctx);
@@ -224,6 +227,10 @@ void DbmsHandleActive(DbmsCtx* ctx)
     if (HAL_GetTick() - ctx->timing.wakeup_ts > GetSetting(ctx, MS_BEFORE_FAULT_CHECKS))
     {
         CtrlUpdateFaults(ctx);
+        if (CtrlHasFault(ctx, CTRL_FAULT_STACK_DISCONNECT) && !ctx->stack_readdressed) {
+            StackReaddress(ctx);
+            ctx->stack_readdressed = true;
+        }
         // PollFaultSummary(ctx);
     }
 
@@ -299,23 +306,6 @@ void DbmsIter(DbmsCtx* ctx)
         PeriodicSaveQStats(ctx);
     }
 
-    // if (!ctx->stack_dir && GetUs(ctx) - ctx->stack_dir_change_ts > 100000)
-    // {
-    //     if (ctx->stats.iters > 10 && !ctx->revautoaddr) 
-    //     {
-    //         // SendReverseAutoAddr(ctx);
-    //         ctx->revautoaddr = true;
-    //     }
-        // StackReverseCommDir(ctx, false);
-    //     HAL_Delay(5);
-    //     ctx->stack_dir = true;
-    //     ctx->stack_dir_change_ts = GetUs(ctx);
-    // }
-    // else if (ctx->stack_dir && GetUs(ctx) - ctx->stack_dir_change_ts > 100000)
-    // {
-    //     ctx->stack_dir = false;
-    //     ctx->stack_dir_change_ts = GetUs(ctx); 
-    // }
 
     // Let everybody know that we are alive
     CanTxHeartbeat(ctx, CalcCrc16((uint8_t*)ctx->settings, sizeof(DbmsSettings)));

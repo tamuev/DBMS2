@@ -43,7 +43,7 @@
 
 #define MAX_TX_DATA 8
 
-#define SINGLE_REV_READ(CTX, DEV, REG, LEN) SendStackFrame1Dev(CTX, MAKE_TX_FRAME_1DEV(REQ_SINGLE_DEV_READ, DEV, REG, LEN - 1))
+#define SINGLE_DEV_READ(CTX, DEV, REG, LEN) SendStackFrame1Dev(CTX, MAKE_TX_FRAME_1DEV(REQ_SINGLE_DEV_READ, DEV, REG, LEN - 1))
 #define SINGLE_DEV_WRITE(CTX, DEV, REG, ...) SendStackFrame1Dev(CTX, MAKE_TX_FRAME_1DEV(REQ_SINGLE_DEV_WRITE, DEV, REG, __VA_ARGS__))
 
 #define STACK_READ(CTX, REG, LEN) SendStackFrameNDev(CTX, MAKE_TX_FRAME_NDEV(REQ_STACK_READ, REG, LEN - 1))
@@ -209,6 +209,8 @@ void StackReverseAutoAddr(DbmsCtx* ctx);
 void StackReverseCommDir(DbmsCtx* ctx, bool reverse_direction);
 void SendReverseAutoAddr(DbmsCtx* ctx);
 void SendSetStackTopManual(DbmsCtx* ctx, int devaddr);
+void StackReaddress(DbmsCtx* ctx);
+void SendStackTopTrialNError(DbmsCtx* ctx);
 
 /**
  * @brief Set the number of active cells in the stack
