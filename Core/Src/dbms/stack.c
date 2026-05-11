@@ -266,7 +266,7 @@ void SendStackTopTrialNError(DbmsCtx* ctx)
     {
         memset(&buf, 0, sizeof(buf));
         SINGLE_DEV_READ(ctx, i, ctx->stack_dir ? 0x306 : 0x307, 1);
-        if ((status = HAL_UART_Receive(ctx->hw.uart, buf, 10, STACK_RECV_TIMEOUT)) != 0)
+        if ((status = HAL_UART_Receive(ctx->hw.uart, buf, RX_FRAME_SIZE(1), STACK_RECV_TIMEOUT)) != 0)
         {
         }
         bool zeros = true;
