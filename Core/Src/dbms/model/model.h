@@ -18,12 +18,13 @@
 #include "../storage.h"
 #include "../vinterface.h"
 
-#define Q_BOUND_L_OC    4.3696    
+#define Q_BOUND_L_OC    4.3696
 #define Q_BOUND_H_OC    4.3967
-#define Q_BOUND_L_RC    4.3914    
-#define Q_BOUND_H_RC    4.197    
+#define Q_BOUND_L_RC    4.197
+#define Q_BOUND_H_RC    4.3914
 #define T_H_PT          45
 #define T_L_PT          25
+#define MIN_OC_I        4.5     // 1 coulomb
 
 void UpdateModel(DbmsCtx* ctx);
 

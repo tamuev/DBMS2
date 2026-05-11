@@ -27,6 +27,7 @@ enum _LedState
     LED_IDLE,
     LED_IDLE_FAULT,
     LED_ACTIVE,
+    LED_ACTIVE_WARNING,
     LED_ACTIVE_FAULT,
     LED_INIT,
     LED_CHARGING,

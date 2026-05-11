@@ -20,6 +20,7 @@
 #include "ledctl.h"
 #include "sched.h"
 #include "settings.h"
+#include "faults/faults.h"
 
 
 /*****************************
@@ -36,6 +37,8 @@ int SendCellsToBalance(DbmsCtx* ctx);
 int SendMetrics(DbmsCtx* ctx);
 
 void SendPlexMetrics(DbmsCtx* ctx);
+
+void SendFaultData(DbmsCtx* ctx);
 
 /**
  * Send a formatted log message to the app  

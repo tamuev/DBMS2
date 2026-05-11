@@ -108,3 +108,11 @@ uint64_t GetRealTime(DbmsCtx* ctx)
     uint64_t delta = HAL_GetTick() - ctx->realtime.local_ts;
     return ctx->realtime.global_ts + delta;
 }
+
+void InitGetUS2()
+{
+    // init DWT for microsecond timestamps
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->CYCCNT = 0;
+    DWT->CTRL  |= DWT_CTRL_CYCCNTENA_Msk;
+}

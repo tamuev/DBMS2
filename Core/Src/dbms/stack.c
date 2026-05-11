@@ -11,6 +11,21 @@
  */
 #include "stack.h"
 
+static uint8_t bad_therms[] = {
+    CELL_BYTE(5, 12),
+    CELL_BYTE(8, 11)
+    // CELL_BYTE(3, 12),
+    // CELL_BYTE(6, 11)
+};
+
+bool IsThermBad(uint8_t side, uint8_t group)
+{
+    for (int i = 0; i < sizeof(bad_therms); ++i) 
+    {
+        if (CELL_BYTE(side, group) == bad_therms[i]) return false;
+    }
+    return false;
+}
 
 /**
  * Sends a wake blip to the battery stack
@@ -93,6 +108,7 @@ void SendOtpEccDatain(DbmsCtx* ctx)
     for (int i = 0; i < 8; i++)
     {
         BROADCAST_WRITE(ctx, REG_OTP_ECC_DATAIN1 + i, DATA(0x00));
+        HAL_Delay(1);
     }
 }
 
@@ -101,6 +117,7 @@ void SendAutoAddr(DbmsCtx* ctx)
     for (int i = 0; i <= N_STACKDEVS; i++)
     {
         BROADCAST_WRITE(ctx, REG_DIR0_ADDR, DATA(0x00 + i));
+        HAL_Delay(1);
     }
 }
 
@@ -108,12 +125,13 @@ void SendSetStackTop(DbmsCtx* ctx)
 {
     // Sets all devices as stack devices
     BROADCAST_WRITE(ctx, REG_COMM_CTRL, DATA(COMM_STACK_DEV));
-
+    HAL_Delay(1);
     // Sets bridge device as non-stack device and bottom of stack
     SINGLE_DEV_WRITE(ctx, 0, REG_COMM_CTRL, DATA(0x00));
-
+    HAL_Delay(1);
     // Sets top of stack
     SINGLE_DEV_WRITE(ctx, N_STACKDEVS-1, REG_COMM_CTRL, DATA(COMM_STACK_DEV | COMM_TOP_STACK));
+    HAL_Delay(1);
 }
 
 void ReadOtpEccDatain(DbmsCtx* ctx)
@@ -121,6 +139,7 @@ void ReadOtpEccDatain(DbmsCtx* ctx)
     for (int i = 0; i < 8; i++)
     {
         BROADCAST_READ(ctx, REG_OTP_ECC_TEST + i, 1);
+        HAL_Delay(1);
     }
 }
 
@@ -135,6 +154,7 @@ void StackAutoAddr(DbmsCtx* ctx)
     SendOtpEccDatain(ctx); // step 1
 
     BROADCAST_WRITE(ctx, REG_CONTROL1, DATA(CTRL1_ADDR_WR));
+    HAL_Delay(1);
 
     SendAutoAddr(ctx); // step 3
 
@@ -152,6 +172,7 @@ void StackAutoAddr(DbmsCtx* ctx)
 void StackSetNumActiveCells(DbmsCtx* ctx, uint8_t n_active_cells)
 {
     BROADCAST_WRITE(ctx, REG_ACTIVE_CELL, DATA(n_active_cells)); // Should this be a stack write?
+    HAL_Delay(1);
 }
 
 
@@ -167,6 +188,7 @@ void StackSetNumActiveCells(DbmsCtx* ctx, uint8_t n_active_cells)
 void StackSetupVoltReadings(DbmsCtx* ctx)
 {
     BROADCAST_WRITE(ctx, REG_ADC_CTRL1, DATA(ADC_CONTINUOUS_RUN | ADC_MAIN_GO));
+    HAL_Delay(1);
 }
 
 /**
@@ -176,7 +198,9 @@ void StackSetupVoltReadings(DbmsCtx* ctx)
  */
 void StackUpdateAllVoltReadings(DbmsCtx* ctx)
 {
-    uint8_t rx_buffer_v[1024];
+    static uint8_t rx_buffer_v[1024];
+    int j;
+    memset(rx_buffer_v, 0, sizeof(rx_buffer_v));
     size_t data_size = N_GROUPS_PER_SIDE * sizeof(int16_t);
     size_t expected_rx_size = RX_FRAME_SIZE(data_size) * N_MONITORS;
 
@@ -187,13 +211,14 @@ void StackUpdateAllVoltReadings(DbmsCtx* ctx)
         IncStackCrcStats(ctx, true, i);
         // TODO: test without on new battery to see if this is necessary
         uint8_t* data = rx_buffer_v + (i * RX_FRAME_SIZE(data_size));
-        for (int j = 0; (data[0] != (STACK_V_REG_START & 0xFF)) && (j < 1024); j++) { data++; }
-        
+        for (j = 0; (data[0] != (STACK_V_REG_START & 0xFF)) && (j < 1024); j++) { data++; }
+        if (j >= 1024 || j < 3) continue;
         RxStackFrameVoltages* clean_frame = (RxStackFrameVoltages*)(data - 3);
         if (clean_frame->crc == CALC_CRC_Rx(clean_frame))
             UpdateVoltages(ctx, clean_frame);
-        else
+        else{
             IncStackCrcStats(ctx, false, i);
+        }
     }
 }
 
@@ -234,8 +259,9 @@ void StackConfigTimeout(DbmsCtx* ctx)
 
 void StackUpdateAllTempReadings(DbmsCtx* ctx)
 {
-    uint8_t rx_buffer_t[1024];
-
+    static uint8_t rx_buffer_t[1024];
+    int j;
+    memset(rx_buffer_t, 0, sizeof(rx_buffer_t));
     size_t data_size = (N_TEMPS_POLL_PER_MONITOR + 2) * sizeof(int16_t); // +2 for GPIO mismatch
     size_t expected_rx_size = RX_FRAME_SIZE(data_size) * N_MONITORS;
 
@@ -246,13 +272,14 @@ void StackUpdateAllTempReadings(DbmsCtx* ctx)
         IncStackCrcStats(ctx, true, i);
         // TODO: test without on new battery to see if this is necessary
         uint8_t* data = rx_buffer_t + (i * RX_FRAME_SIZE(data_size));
-        for (int j = 0; data[0] != (STACK_T_REG_START & 0xFF) && j < 1024; j++) { data++; }
-
+        for (j = 0; data[0] != (STACK_T_REG_START & 0xFF) && j < 1024; j++) { data++; }
+        if (j >= 1024 || j < 3) continue;
         RxStackFrameTemps* clean_frame = (RxStackFrameTemps*)(data - 3); 
         if (clean_frame->crc == CALC_CRC_Rx(clean_frame))
             UpdateTemps(ctx, clean_frame);
-        else
+        else{
             IncStackCrcStats(ctx, false, i);
+        }
     }
 }
 
@@ -272,10 +299,14 @@ void UpdateTemps(DbmsCtx* ctx, RxStackFrameTemps* frame)
 
 void UpdateVoltages(DbmsCtx* ctx, RxStackFrameVoltages* frame)
 {
+    if (ADDR_BCAST_TO_STACK(frame->devaddr) >= N_MONITORS) return;
+
+    ctx->stats.last_monitor_msg[ADDR_BCAST_TO_STACK(frame->devaddr)] = ctx->stats.iters;
+
     for (size_t j = 0; j < N_GROUPS_PER_SIDE; j++)
     {
         uint16_t raw = (frame->data[j * sizeof(int16_t)] << 8) + frame->data[j * sizeof(int16_t) + 1];
-        ctx->cell_states[ADDR_BCAST_TO_STACK(frame->devaddr)].voltages[j] = (raw * STACK_V_UV_PER_BIT) / 1000.0; // floating mV
+        ctx->cell_states[ADDR_BCAST_TO_STACK(frame->devaddr)].voltages[N_GROUPS_PER_SIDE - j - 1] = (raw * STACK_V_UV_PER_BIT) / 1000.0; // floating mV
     }
 }
 
@@ -286,11 +317,15 @@ int StackRead(DbmsCtx* ctx, uint8_t* raw, uint16_t start_reg, uint8_t data_size,
     {
         return status;
     }
+    __HAL_UART_CLEAR_FEFLAG(ctx->hw.uart);
+    __HAL_UART_CLEAR_OREFLAG(ctx->hw.uart);
+    __HAL_UART_CLEAR_NEFLAG(ctx->hw.uart);
+    volatile uint8_t dummy = ctx->hw.uart->Instance->DR;
+    (void) dummy;
     // TODO: redo the RX path for stack
-    if ((status = HAL_UART_Receive(ctx->hw.uart, raw, expected_size+1, STACK_RECV_TIMEOUT)) != 0) 
+    if ((status = HAL_UART_Receive(ctx->hw.uart, raw, expected_size+2, STACK_RECV_TIMEOUT)) != 0)
     {
-        return status;
-    } 
+    }
     return status;
 }
 
@@ -344,22 +379,50 @@ void StackCalcStats(DbmsCtx* ctx)
 {
     float v_min = 999999.0f, v_max = 0.0f, v_sum = 0.0f;
     float t_min = 999.0f,    t_max = 0.0f, t_sum = 0.0f;
+    uint8_t v_max_cell = CELL_BYTE_NA, 
+            v_min_cell = CELL_BYTE_NA, 
+            t_max_cell = CELL_BYTE_NA, 
+            t_min_cell = CELL_BYTE_NA;
 
     for (int i = 0; i < N_SIDES; i++)
     {
         for (int j = 0; j < N_GROUPS_PER_SIDE; j++)
         {
             float v = ctx->cell_states[i].voltages[j];
-            v_min = MIN(v_min, v);
-            v_max = MAX(v_max, v);
+
+            if (v < v_min)
+            {
+                v_min = v;
+                v_min_cell = CELL_BYTE(i, j);
+            }
+
+            if (v > v_max)
+            {
+                v_max = v;
+                v_max_cell = CELL_BYTE(i, j);
+            }
+
             v_sum += v;
         }
 
         for (int j = 0; j < N_TEMPS_PER_SIDE; j++)
         {
+            if (IsThermBad(i, j)) continue;
+
             float t = ctx->cell_states[i].temps[j];
-            t_min = MIN(t_min, t);
-            t_max = MAX(t_max, t);
+
+            if (t < t_min)
+            {
+                t_min = t;
+                t_min_cell = CELL_BYTE(i, j);
+            }
+
+            if (t > t_max)
+            {
+                t_max = t;
+                t_max_cell = CELL_BYTE(i, j);
+            }
+
             t_sum += t;
         }
     }
@@ -371,7 +434,12 @@ void StackCalcStats(DbmsCtx* ctx)
 
     ctx->stats.min_t = t_min;
     ctx->stats.max_t = t_max;
-    ctx->stats.avg_t = t_sum / (N_SIDES * N_TEMPS_PER_SIDE);
+    ctx->stats.avg_t = t_sum / (N_SIDES * N_TEMPS_PER_SIDE - sizeof(bad_therms));
+
+    ctx->stats.min_v_cell = v_min_cell;
+    ctx->stats.max_v_cell = v_max_cell;
+    ctx->stats.min_t_cell = t_min_cell;
+    ctx->stats.max_t_cell = t_max_cell;
 }
 
 void IncStackCrcStats(DbmsCtx* ctx, bool good, int monitor_id)
@@ -380,13 +448,13 @@ void IncStackCrcStats(DbmsCtx* ctx, bool good, int monitor_id)
     {
         ctx->stats.n_rx_stack_frames++;
         ctx->stats.n_rx_stack_frames_itvl++;
-        ctx->faults.monitor_total_frames[monitor_id]++;
+        ctx->stats.monitor_total_frames[monitor_id]++;
     }
     else
     {
         ctx->stats.n_rx_stack_bad_crcs++;
         ctx->stats.n_rx_stack_bad_crcs_itvl++;
-        ctx->faults.monitor_bad_crcs[monitor_id]++;
+        ctx->stats.monitor_bad_crcs[monitor_id]++;
     }
 }
 
@@ -445,9 +513,9 @@ void StackBalancingConfig(DbmsCtx* ctx)
     STACK_WRITE(ctx, REG_BAL_CTRL2, DATA(BAL2_FLTSTOP_EN | BAL2_OTCB_EN | BAL2_AUTO_BAL));
 }
 
-void StackSetDeviceBalanceTimers(DbmsCtx* ctx, uint8_t dev_addr, bool odds, StackBalanceTimes bal_time_idx)
+void StackSetDeviceBalanceTimers(DbmsCtx* ctx, uint8_t side, bool odds, StackBalanceTimes bal_time_idx)
 {
-    bool* cells_to_bal = ctx->cell_states[dev_addr].cells_to_balance;
+    bool* cells_to_bal = ctx->cell_states[side].cells_to_balance;
 
     uint16_t base_reg = REG_CB_CELL1_CTRL;
     uint8_t bal_time = MIN((uint8_t)bal_time_idx, (uint8_t)__N_BAL_TIMES);
@@ -457,7 +525,7 @@ void StackSetDeviceBalanceTimers(DbmsCtx* ctx, uint8_t dev_addr, bool odds, Stac
         uint16_t reg_addr = base_reg - i; // registers decrement
         uint8_t timer_val = i % 2 == odds && cells_to_bal[i] ? bal_time : 0x00;
         
-        SINGLE_DEV_WRITE(ctx, dev_addr, reg_addr, DATA(timer_val));
+        SINGLE_DEV_WRITE(ctx, ADDR_STACK_TO_BCAST(side), reg_addr, DATA(timer_val));
         HAL_Delay(2);  // small delay between writes
     }
 }
@@ -474,8 +542,8 @@ void StackStartBalancing(DbmsCtx* ctx, bool odds, int32_t bal_time)
 {
     for(size_t side = 0; side < N_SIDES; ++side)
     {
-        uint8_t dev_addr = side * N_MONITORS_PER_SIDE + 1;
-        StackSetDeviceBalanceTimers(ctx, dev_addr, odds, bal_time);
+        uint8_t dev_addr = ADDR_STACK_TO_BCAST(side);
+        StackSetDeviceBalanceTimers(ctx, side, odds, bal_time);
         StackStartDeviceBalancing(ctx, dev_addr);
     }
 }
@@ -484,7 +552,11 @@ void StackComputeCellsToBalance(DbmsCtx* ctx, bool odds, int32_t threshold_mv)
 {
     // if any segment needs balancing - if this is false at the end we can skip balancing
     float balance_threshold = ctx->charging.pre_bal_min_v + threshold_mv;
-    CanLog(ctx, "minv = %d chbalth = %d\n", (int)ctx->charging.pre_bal_min_v, (int)balance_threshold);
+    CanLog(ctx, "minv = %d maxv = %d dv = %d chbalth = %d\n", 
+        (int)ctx->charging.pre_bal_min_v, 
+        (int)ctx->charging.pre_bal_max_v, 
+        (int)(ctx->charging.pre_bal_max_v-ctx->charging.pre_bal_min_v), 
+        (int)balance_threshold);
     // if (ctx->stats.max_v > balance_threshold) return false;
     for (size_t side = 0; side < N_SIDES; side++)
     {

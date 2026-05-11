@@ -1,10 +1,10 @@
 /* USER CODE BEGIN Header */
-/** 
- * 
+/**
+ *
  * Distributed BMS      STM32 Generated File
  *
  * Copyright (C) 2025   Texas A&M University
- * 
+ *
  *                      Justus Languell  <justus@tamu.edu>
  *                      Cam Stone        <cameron28202@tamu.edu>
  *                      Abhinav Akavaram <abhinav.akavaram@tamu.edu>
@@ -117,8 +117,9 @@ int main(void)
   MX_CAN1_Init();
   MX_TIM5_Init();
   /* USER CODE BEGIN 2 */
-  
+
   dbms_ctx.hw.adc = &hadc1;
+  dbms_ctx.hw.elcon_can = &hcan1;
   dbms_ctx.hw.can = &hcan2;
   dbms_ctx.hw.timer = &htim5;
   dbms_ctx.hw.timer_pwm_1 = &htim3;
@@ -127,7 +128,7 @@ int main(void)
 
 
   DbmsAlloc(&dbms_ctx);
-  DbmsInit(&dbms_ctx);
+DbmsInit(&dbms_ctx);
 
   /* USER CODE END 2 */
 
@@ -257,13 +258,13 @@ static void MX_CAN1_Init(void)
 
   /* USER CODE END CAN1_Init 1 */
   hcan1.Instance = CAN1;
-  hcan1.Init.Prescaler = 16;
+  hcan1.Init.Prescaler = 6;
   hcan1.Init.Mode = CAN_MODE_NORMAL;
   hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
-  hcan1.Init.TimeSeg1 = CAN_BS1_1TQ;
-  hcan1.Init.TimeSeg2 = CAN_BS2_1TQ;
+  hcan1.Init.TimeSeg1 = CAN_BS1_11TQ;
+  hcan1.Init.TimeSeg2 = CAN_BS2_2TQ;
   hcan1.Init.TimeTriggeredMode = DISABLE;
-  hcan1.Init.AutoBusOff = DISABLE;
+  hcan1.Init.AutoBusOff = ENABLE;
   hcan1.Init.AutoWakeUp = DISABLE;
   hcan1.Init.AutoRetransmission = DISABLE;
   hcan1.Init.ReceiveFifoLocked = DISABLE;
@@ -292,6 +293,11 @@ static void MX_CAN2_Init(void)
 
   /* USER CODE BEGIN CAN2_Init 1 */
 
+  // hcan2.Init.Prescaler | Baud Rate
+  // ---------------------+----------
+  // 6                    | 1M
+  // 12                   | 500K
+
   /* USER CODE END CAN2_Init 1 */
   hcan2.Instance = CAN2;
   hcan2.Init.Prescaler = 6;
@@ -300,7 +306,7 @@ static void MX_CAN2_Init(void)
   hcan2.Init.TimeSeg1 = CAN_BS1_5TQ;
   hcan2.Init.TimeSeg2 = CAN_BS2_1TQ;
   hcan2.Init.TimeTriggeredMode = DISABLE;
-  hcan2.Init.AutoBusOff = DISABLE;
+  hcan2.Init.AutoBusOff = ENABLE;
   hcan2.Init.AutoWakeUp = DISABLE;
   hcan2.Init.AutoRetransmission = ENABLE;
   hcan2.Init.ReceiveFifoLocked = DISABLE;
@@ -416,7 +422,7 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 15999;
+  htim2.Init.Prescaler = 83;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.Period = 4294967295;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -438,7 +444,7 @@ static void MX_TIM2_Init(void)
   sSlaveConfig.InputTrigger = TIM_TS_TI1FP1;
   sSlaveConfig.TriggerPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
   sSlaveConfig.TriggerPrescaler = TIM_ICPSC_DIV1;
-  sSlaveConfig.TriggerFilter = 0;
+  sSlaveConfig.TriggerFilter = 0xF;
   if (HAL_TIM_SlaveConfigSynchro(&htim2, &sSlaveConfig) != HAL_OK)
   {
     Error_Handler();
@@ -446,7 +452,7 @@ static void MX_TIM2_Init(void)
   sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
   sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
   sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
-  sConfigIC.ICFilter = 0;
+  sConfigIC.ICFilter = 0xF;
   if (HAL_TIM_IC_ConfigChannel(&htim2, &sConfigIC, TIM_CHANNEL_1) != HAL_OK)
   {
     Error_Handler();
@@ -685,7 +691,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
     if (GPIO_Pin == GPIO_PIN_12)
     {
         GPIO_PinState pin_state = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_12);
-        
         if (pin_state == GPIO_PIN_SET)
         {
             dbms_ctx.qstats.historic_accumulated_loss += dbms_ctx.qstats.accumulated_loss;
@@ -714,7 +719,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 
     if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rxHeader, rxData) == HAL_OK)
     {
-        // Manually correct IDE / RTR fields 
+        // Manually correct IDE / RTR fields
         // // Not sure if necessary. TODO: double check
         // uint32_t rir = hcan->Instance->sFIFOMailBox[0].RIR;
 
@@ -738,7 +743,7 @@ void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan)
 
     if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO1, &rxHeader, rxData) == HAL_OK)
     {
-        // // Manually correct IDE / RTR fields 
+        // // Manually correct IDE / RTR fields
         // uint32_t rir = hcan->Instance->sFIFOMailBox[1].RIR;
 
         // rxHeader.IDE = (rir & CAN_RI0R_IDE) ? CAN_ID_EXT : CAN_ID_STD;
@@ -749,7 +754,7 @@ void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan)
         // else
         //     rxHeader.ExtId = (rir & (CAN_RI0R_EXID | CAN_RI0R_STID)) >> CAN_RI0R_EXID_Pos;
 
-        DbmsCanRx(&dbms_ctx, CAN_RX_1, rxHeader, rxData);
+        DbmsCanRx(&dbms_ctx, CAN_RX_0, rxHeader, rxData);
     }
 }
 
@@ -760,7 +765,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
         uint32_t captured_value = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
         if (captured_value)
         {
-            dbms_ctx.j1772.cp_duty_cycle = 100 * HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2) / captured_value; // if 1 µs timer tick
+            dbms_ctx.j1772.cp_duty_cycle = 100 *  HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2) / captured_value; // if 1 µs timer tick
         }
         dbms_ctx.j1772.last_cp_pwm_read = HAL_GetTick();
         //update receive ts

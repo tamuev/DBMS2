@@ -17,7 +17,7 @@
 
 bool ElconConnected(DbmsCtx* ctx)
 {
-    return (HAL_GetTick() - ctx->elcon.heartbeat < GetSetting(ctx, QUIET_MS_BEFORE_SHUTDOWN)) && !CtrlHasAnyFaults(ctx);
+    return (HAL_GetTick() - ctx->elcon.heartbeat < GetSetting(ctx, QUIET_MS_BEFORE_SHUTDOWN)) && !CtrlHasAnyHardFaults(ctx);
 }
 
 bool ChargingTimeout(DbmsCtx* ctx)
@@ -41,7 +41,7 @@ bool NeedsToBalance(DbmsCtx* ctx) // TODO: this is the start condition
 
 bool NeedsToBalanceMore(DbmsCtx* ctx)
 {
-    return 1000 * (ctx->stats.max_v - ctx->charging.pre_bal_min_v) > GetSetting(ctx, CH_BAL_DELTA_END);
+    return (ctx->charging.pre_bal_max_v - ctx->charging.pre_bal_min_v) > GetSetting(ctx, CH_BAL_DELTA_END);
     // && 1000 * ctx->stats.min_v > GetSetting(ctx, CH_BAL_MIN_V);
 }
 
@@ -55,7 +55,7 @@ void ChargingComputeElconReq(DbmsCtx* ctx)
 {
     ctx->elcon.v_req = MIN(GetSetting(ctx, CH_TARGET_V) * N_GROUPS_PER_SIDE * N_SIDES, 600000) / 1000;
     uint32_t ac_current = MIN(ctx->j1772.maxCurrentSupply, GetSetting(ctx, CH_I));
-    uint32_t elcon_eff = CLAMP((int32_t)GetSetting(ctx, CH_ELCON_EFF), 0, 100) / 100.0;
+    float elcon_eff = CLAMP((int32_t)GetSetting(ctx, CH_ELCON_EFF), 0, 100) / 100.0;
     uint32_t power_lim = ac_current * GetSetting(ctx, CH_AC_VOLTAGE) * elcon_eff;
     ctx->elcon.i_req = power_lim / ctx->elcon.v_req;
 }
@@ -172,6 +172,8 @@ void ChargingUpdate(DbmsCtx* ctx)
 {
     J1772ReadState(ctx);
 
+    ctx->charging.only_balance = (HAL_GetTick() - ctx->charging.bal_loop_hb < 3000) && !CtrlHasAnyHardFaults(ctx);
+
     ctx->charging.conn = ChargingConnected(ctx);
     // if (charge_conn && !ctx->charging.conn)         ;       // can register an action here
     // else if (!charge_conn && ctx->charging.conn)    ;       // can register an action here
@@ -183,7 +185,7 @@ void ChargingUpdate(DbmsCtx* ctx)
 
     // Seperate condition to detect no connection because it is a
     // global transition that would need to be implemented in every state
-    if (!ctx->charging.conn)
+    if (!ctx->charging.conn && !ctx->charging.only_balance)
     {
         ChargingEnterState(ctx, CH_NO_CONN);
     }
@@ -193,8 +195,8 @@ void ChargingUpdate(DbmsCtx* ctx)
     case CH_NO_CONN:
         SendElconRequest(ctx, 0, 0, 1);
 
+        if (ctx->charging.only_balance) ChargingEnterState(ctx, CH_WAIT_1);
         if (ctx->charging.conn) ChargingEnterState(ctx, CH_CHARGING);
-
         break;
 
     case CH_CHARGING:
@@ -204,6 +206,7 @@ void ChargingUpdate(DbmsCtx* ctx)
         SendElconRequest(ctx, ctx->elcon.v_req, ctx->elcon.i_req, 0);
         CanLog(ctx, "Elcon V=%d I=%d\n", ctx->elcon.v_req, ctx->elcon.i_req);
 
+        // if (ctx->charging.only_balance) ChargingEnterState(ctx, CH_WAIT_1);
         if (TIME_IN_STATE_MS(ctx) > 1000) // TODO:?
         {
             if (NeedsToBalance(ctx)) ChargingEnterState(ctx, CH_WAIT_1);
@@ -213,7 +216,7 @@ void ChargingUpdate(DbmsCtx* ctx)
     case CH_WAIT_1:
         SendElconRequest(ctx, 0, 0, 1);
         ctx->led_state = LED_CHARGING_WAIT;
-        if (TIME_IN_STATE_MS(ctx) > 10000)
+        if (TIME_IN_STATE_MS(ctx) > 3000)
         {
             ChargingComputePreBalanceAverages(ctx);
             ChargingEnterState(ctx, CH_BALANCING_EVENS);
@@ -226,12 +229,21 @@ void ChargingUpdate(DbmsCtx* ctx)
     case CH_WAIT_2:
         SendElconRequest(ctx, 0, 0, 1);
         ctx->led_state = LED_CHARGING_WAIT;
-        if (TIME_IN_STATE_MS(ctx) > 10000)
+        if (TIME_IN_STATE_MS(ctx) > 3000)
         {
             ChargingComputePreBalanceAverages(ctx);
             // Check if we need more balancing
-            if (NeedsToBalanceMore(ctx)) ChargingEnterState(ctx, CH_BALANCING_EVENS);
-            else ChargingEnterState(ctx, CH_CHARGING);
+            if (NeedsToBalanceMore(ctx)) 
+            {
+                ChargingEnterState(ctx, CH_BALANCING_EVENS);
+            }
+            else 
+            {
+                if (ctx->charging.only_balance)
+                    ChargingEnterState(ctx, CH_COMPLETE);
+                else
+                    ChargingEnterState(ctx, CH_CHARGING);
+            }
         }
         else
         {

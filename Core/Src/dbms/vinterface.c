@@ -109,7 +109,7 @@ int SendMetrics(DbmsCtx* ctx)
     SendMetric(ctx, 13, ctx->stats.looptime);
     SendMetric(ctx, 14, ctx->stats.end_delay);
 
-    SendMetric(ctx, 15, ctx->faults.controller_mask);
+    SendMetric(ctx, 15, ctx->faults.active_faults);
 
     SendMetric(ctx, 16, ctx->stats.n_rx_stack_frames);
     SendMetric(ctx, 17, ctx->stats.n_rx_stack_bad_crcs);
@@ -177,13 +177,26 @@ int SendMetrics(DbmsCtx* ctx)
 
     SendMetric(ctx, 69, F2I_K(ctx->stats.pack_v, 1e4));
     SendMetric(ctx, 70, ctx->precharged);
-    SendMetric(ctx, 71, (ctx->stats.n_rx_stack_bad_crcs_itvl * 100) / ctx->stats.n_rx_stack_frames_itvl);
+    if (ctx->stats.n_rx_stack_frames_itvl != 0)
+        SendMetric(ctx, 71, (ctx->stats.n_rx_stack_bad_crcs_itvl * 100) / ctx->stats.n_rx_stack_frames_itvl);
     SendMetric(ctx, 72, ctx->stats.n_int_shutdowns);
 
     for (int i = 0; i < N_MONITORS; i++)
     {
-        SendMetric(ctx, 80 + i, ctx->faults.monitor_bad_crcs[i]);
+        SendMetric(ctx, 80 + i, ctx->stats.monitor_bad_crcs[i]);
     }
+
+    SendMetric(ctx, 90, ctx->delay.T1);
+    SendMetric(ctx, 91, ctx->delay.T2);
+    SendMetric(ctx, 92, ctx->delay.T3);
+    SendMetric(ctx, 93, ctx->delay.T4);
+
+    SendMetric(ctx, 94, ctx->delay.one_way_delay);
+    SendMetric(ctx, 95, ctx->delay.mu);
+    SendMetric(ctx, 96, ctx->delay.st_dev);
+
+    SendMetric(ctx, 97, ctx->stats.n_can_bussoffs);
+
     return 0;
 }
 
@@ -194,6 +207,23 @@ void SendPlex32(DbmsCtx* ctx, uint32_t id, uint32_t m)
     data[1] = (m >> 2*8) & 0xff;
     data[2] = (m >> 1*8) & 0xff;
     data[3] = (m >> 0*8) & 0xff;
+    CanTransmit(ctx, id, data);
+}
+
+void SendPlex32x2(DbmsCtx* ctx, uint32_t id, uint32_t v1, uint32_t v2)
+{
+    uint8_t data[8] = {0};
+
+    data[0] = (v1 >> 3*8) & 0xff;
+    data[1] = (v1 >> 2*8) & 0xff;
+    data[2] = (v1 >> 1*8) & 0xff;
+    data[3] = (v1 >> 0*8) & 0xff;
+
+    data[4] = (v2 >> 3*8) & 0xff;
+    data[5] = (v2 >> 2*8) & 0xff;
+    data[6] = (v2 >> 1*8) & 0xff;
+    data[7] = (v2 >> 0*8) & 0xff;
+
     CanTransmit(ctx, id, data);
 }
 
@@ -218,30 +248,34 @@ void SendPlex16x4(DbmsCtx* ctx, uint16_t id, uint16_t v1, uint16_t v2, uint16_t 
 
 void SendPlexMetrics(DbmsCtx* ctx)
 {
-    uint8_t data[8] = {0};
-    uint8_t soc = CLAMP((uint8_t)(ctx->model.z_oc * 100), 0, 100);
-    data[0] = soc;
-    CanTransmit(ctx, 0x16, data);
+    SendPlex32x2(ctx, 0x10, F2I_K(CLAMP(ctx->model.z_oc, 0.0, 1.0), 100000), 0);
 
     int32_t pack_v = ctx->stats.avg_v * (N_SIDES * N_GROUPS_PER_SIDE);
 
-    SendPlex32(ctx, 0x17, ctx->faults.controller_mask);
-    SendPlex32(ctx, 0x18, ctx->current_sensor.current_ma / 1000);
-    SendPlex32(ctx, 0x19, ctx->current_sensor.ima.current_mavg_ma / 1000);
-    SendPlex32(ctx, 0x1a, ctx->timing.pl_pulse_t);
-    SendPlex32(ctx, 0x1b, pack_v);
-    SendPlex32(ctx, 0x1c, ctx->stats.iters);
-    SendPlex32(ctx, 0x1d, (ctx->stats.n_rx_stack_bad_crcs_itvl * 100) / ctx->stats.n_rx_stack_frames_itvl);
-    SendPlex32(ctx, 0x1e, ctx->current_sensor.charge_as);
+    SendPlex32x2(ctx, 0x11, ctx->faults.active_faults | ctx->faults.latched_faults, ctx->current_sensor.current_ma / 1000);
+    // SendPlex32x2(ctx, 0x12, ctx->isense.ima.current_mavg_ma / 1000, ctx->pl_pulse_t);
+    SendPlex32x2(ctx, 0x12, pack_v, ctx->stats.iters);
+    SendPlex32x2(ctx, 0x13, ctx->stats.avg_t, ctx->current_sensor.charge_as);
 
 #ifndef F2I_K
 #define F2I_K(F, K) ((int)((F) * (K)))
 #endif
 
-    SendPlex16x4(ctx, 0x011, F2I_K(ctx->stats.max_t, 1), F2I_K(ctx->stats.min_t, 1), F2I_K(ctx->stats.avg_t, 1), 0);
+    SendPlex16x4(ctx, 0x14, F2I_K(ctx->stats.max_t, 1), F2I_K(ctx->stats.min_t, 1), 0, 0);
 
-    SendPlex16x4(ctx, 0x012, F2I_K(ctx->stats.max_v, 1000), F2I_K(ctx->stats.min_v, 1000), F2I_K(ctx->stats.avg_v, 1000),
+    SendPlex16x4(ctx, 0x15, F2I_K(ctx->stats.max_v, 1000), F2I_K(ctx->stats.min_v, 1000), F2I_K(ctx->stats.avg_v, 1000),
                  F2I_K(pack_v, 10));
+
+    SendPlex32x2(ctx, 0x16, (uint32_t) ctx->delay.one_way_delay, (uint32_t) ctx->delay.mu);
+    SendPlex32x2(ctx, 0x17, (uint32_t) ctx->delay.st_dev, 0);
+
+    SendPlex32x2(ctx, 0x18, F2I_K(ctx->model.Q, 1e6), F2I_K(ctx->model.z_rc, 1e6));
+    SendPlex32x2(ctx, 0x19, F2I_K(ctx->model.V_oc, 1e6), F2I_K(ctx->model.R_oc, 1e6));
+    SendPlex32x2(ctx, 0x1A, F2I_K(ctx->model.R0, 1e6), F2I_K(ctx->model.R1, 1e6));
+    SendPlex32x2(ctx, 0x1B, F2I_K(ctx->model.R2, 1e6), F2I_K(ctx->model.R_rc, 1e6));
+    SendPlex32x2(ctx, 0x1C, F2I_K(ctx->model.R_cell, 1e6), F2I_K(ctx->model.I_lim, 1e6));
+    SendPlex32x2(ctx, 0x1D, F2I_K(ctx->model.P_lim, 1e3), ctx->current_sensor.current_ma / N_P_GROUP);
+    SendPlex16x4(ctx, 0x1E, ctx->stats.n_can_bussoffs, 0, 0, 0);
 }
 
 
@@ -304,7 +338,7 @@ int SendCellVoltages(DbmsCtx* ctx)
     {
         for (size_t j = 0; j < N_GROUPS_PER_SIDE; j++)
         {
-            buffer[N_GROUPS_PER_SIDE - j - 1] = CLAMP_U16((long)lroundf(ctx->cell_states[i].voltages[j] * 10.0f));
+            buffer[j] = CLAMP_U16((long)lroundf(ctx->cell_states[i].voltages[j] * 10.0f));
         }
 
         SendCellDataBuffer(ctx, CANID_CELLSTATE_VOLTS, i, buffer, ARRAY_LEN(buffer));
@@ -340,4 +374,26 @@ int SendCellsToBalance(DbmsCtx* ctx)
         SendCellDataBuffer(ctx, CANID_CELLSTATE_BALANCE, i, buffer, ARRAY_LEN(buffer));
     }
     return 0;
+}
+
+void SendFaultData(DbmsCtx* ctx)
+{
+    SendPlex32x2(ctx, CANID_TX_FAULTS_MASKS1, ctx->faults.active_faults, ctx->faults.latched_faults);
+    SendPlex32x2(ctx, CANID_TX_FAULTS_MASKS2, ctx->faults.historic_faults, NONMASKABLE_FAULTS);
+    SendPlex32x2(ctx, CANID_TX_FAULTS_MASKS3, ctx->faults.warnings_config, ctx->faults.nonlatching_config);
+
+    FaultData buf[2];
+
+    for (int i = 0; i < CTRL_FAULT_TYPE_COUNT; i += 2) {
+        buf[0] = ctx->faults.fault_data[i];
+        buf[1] = ctx->faults.fault_data[i + 1];
+
+        // endian swap
+        buf[0].value = __builtin_bswap16(buf[0].value);
+        buf[1].value = __builtin_bswap16(buf[1].value);
+
+        uint32_t id = CANID_TX_FAULTS_DATA + (i / 2);
+
+        CanTransmit(ctx, id, (uint8_t*) buf);
+    }
 }

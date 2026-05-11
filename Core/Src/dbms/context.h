@@ -19,11 +19,11 @@
 
 #define SPLIT_STACK_OPS     1       // 1 = divide stack ops in half, every-other-iter, 0 = do not
 
-#define N_SEGMENTS          1       // number of segments in the stack
+#define N_SEGMENTS          5       // number of segments in the stack
 #define N_SIDES_PER_SEG     2       // number of sides per segment
 #define N_MONITORS_PER_SIDE 1       // number of monitors per side
 #define N_GROUPS_PER_SIDE   13      // number of voltages per side
-#define N_TEMPS_PER_MONITOR 13       // number of temps per monitor chip 
+#define N_TEMPS_PER_MONITOR 13       // number of temps per monitor chip
 #define N_P_GROUP           3       // number of cells per parallel group
 
 // #define HAS_FAN
@@ -38,11 +38,17 @@
 #define ADDR_BCAST_TO_STACK(BCAST_ADDR) (BCAST_ADDR - 1)
 #define ADDR_STACK_TO_BCAST(STACK_ADDR) (STACK_ADDR + 1)
 
+#define CELL_BYTE_NA 0xFF
+#define CELL_BYTE(side, cell) ((((side) & 0xF) << 4) | ((cell) & 0xF))
+
 #define N_THERM_V_TO_T_ENTRIES      121
 #define N_OCV_ENTRIES               201
 #define N_RC_ENTRIES                101
 #define N_C_ENTRIES                 101
 #define N_I_MA_MEMORIZED            100
+
+#define ALPHA                       0.25
+#define BETA                        0.125
 
 // DANGER:  THESE DEBUGS WILL PREVENT THE CONTROLLER FROM WORKING NORMALLY
 // #define DEBUG_DO_OVERWRITE_TEMPS_OVER_CAN
@@ -76,7 +82,8 @@ typedef struct _HwCtx
     UART_HandleTypeDef* uart;
     I2C_HandleTypeDef* i2c;
 
-    CAN_HandleTypeDef* can;
+    CAN_HandleTypeDef* elcon_can; // charger bus -- 500k
+    CAN_HandleTypeDef* can; // vehicle bus -- 1m
     CAN_TxHeaderTypeDef can_tx_header;
     uint32_t can_tx_mailbox;
 } HwCtx;
@@ -130,6 +137,11 @@ typedef struct _Stats
     float max_t;
     float avg_t;
 
+    uint8_t min_v_cell;
+    uint8_t max_v_cell;
+    uint8_t min_t_cell;
+    uint8_t max_t_cell;
+
     float pack_v;
 
     uint32_t elcon_rx;
@@ -137,6 +149,17 @@ typedef struct _Stats
     uint64_t n_logging_frames;
     bool fault_line_faulted;
 
+    uint16_t monitor_bad_crcs[N_MONITORS];
+    uint16_t monitor_total_frames[N_MONITORS];
+    uint64_t last_can_tx_ts;
+    uint64_t last_ivt_rx_ts;
+
+    uint32_t can_esr_reg;
+    uint64_t last_can_bo_ts;
+    uint64_t last_can_bad_ts;
+    uint16_t n_can_bussoffs;
+
+    uint64_t last_monitor_msg[N_MONITORS]; // Last iter that a message was received from each monitor
 } Stats;
 
 typedef struct _Model   // Outputs from the ECM model
@@ -154,6 +177,7 @@ typedef struct _Model   // Outputs from the ECM model
 
     float R_cell;
     float I_lim;
+    float P_lim;
 } Model;
 
 typedef struct _Snapshot
@@ -227,6 +251,18 @@ typedef struct _Profiling {
     } times;
 } Profiling;
 
+typedef struct _Delay {
+    // used for calculating one-way delay (bus latency from DCU)
+    uint64_t T1;
+    uint64_t T2;
+    uint64_t T3;
+    uint64_t T4;
+    uint64_t mu;
+    uint64_t st_dev;
+    uint64_t one_way_delay;
+    uint64_t clock_offset;
+} Delay;
+
 typedef struct _LutData {
     LTE lut_therm_v_to_t[N_THERM_V_TO_T_ENTRIES];
 } LutData;
@@ -280,15 +316,27 @@ typedef struct _ChargeStats {
     uint32_t initial_set_ts;
 } ChargeStats;
 
+typedef struct __attribute__((packed)) _FaultData {
+    uint8_t cell;
+    uint8_t n_throws;
+    uint16_t value;
+} FaultData;
+
 typedef struct _FaultState {
-    uint32_t controller_mask;
+    uint32_t active_faults;         // Currently active fault/warning conditions - Resets when condition is clear
+    uint32_t latched_faults;        // Currently latched fault/warning conditions - Resets with app clear
+    uint32_t historic_faults;       // Historic faults/warnings even if non-latching - Resets with app clear
+
+    // Fault config
+    uint32_t warnings_config;       // Which faults are considered warnings
+    uint32_t nonlatching_config;    // Which faults are non-latching
+
+    FaultData fault_data[32];
+
     uint8_t bridge_fault_summary;
     uint32_t bridge_faults;
     uint8_t monitor_fault_summary[N_MONITORS];
     bool had_fault;
-    uint8_t monitor_bad_crcs[N_MONITORS];
-    uint8_t monitor_total_frames[N_MONITORS];
-
 } FaultState;
 
 typedef struct _Blackbox {
@@ -320,16 +368,18 @@ typedef struct _J1772 {
 
 typedef struct _Charging {
     int64_t heartbeat;
+    int64_t bal_loop_hb;
     int64_t state_enter_ts;
     ChargingState prev_state;
     ChargingState state;
-    bool allowed;
-    bool conn;
     float pre_bal_accumulator[N_SIDES][N_GROUPS_PER_SIDE];
     float pre_bal_average_v[N_SIDES][N_GROUPS_PER_SIDE];
     float pre_bal_min_v;
     float pre_bal_max_v;
     size_t pre_bal_sample_count;
+    bool allowed;
+    bool conn;
+    bool only_balance;
 } Charging;
 
 typedef struct _DbmsCtx
@@ -360,6 +410,7 @@ typedef struct _DbmsCtx
     Charging charging;
     Profiling profiling;
     MonitorFaults monitor_faults[N_MONITORS];
+    Delay delay;
 } DbmsCtx;
 
 
