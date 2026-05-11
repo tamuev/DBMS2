@@ -113,6 +113,11 @@ void CheckStackFaults(DbmsCtx* ctx)
         CanLog(ctx, "dm=%x\n", disconnected_mask);
     }
 
+    if (monitor_fault_mask != 0)
+    {
+        CtrlSetFault(ctx, CTRL_FAULT_MONITOR, CELL_BYTE_NA, monitor_fault_mask);
+    }
+
     if (GetUs(ctx) - ctx->stats.last_can_tx_ts >= GetSetting(ctx, MS_BEFORE_CAN_FAIL) * 1000)
     {
         CtrlSetFault(ctx, CTRL_FAULT_CAN_FAIL, CELL_BYTE_NA, BIT(CTRL_TX_FAILS));

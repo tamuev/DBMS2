@@ -30,9 +30,12 @@ void PollFaultSummary(DbmsCtx* ctx)
         
         RxStackFrameVoltages* clean_frame = (RxStackFrameVoltages*)(data - 3);
         if (clean_frame->crc == CALC_CRC_Rx(clean_frame))
-            ctx->monitor_faults[clean_frame->devaddr].summary = clean_frame->data[0];
+        {
+            ctx->monitor_faults[ADDR_BCAST_TO_STACK(clean_frame->devaddr)].summary = clean_frame->data[0];
+            CanLog(ctx, "fs: %d", ctx->monitor_faults[ADDR_BCAST_TO_STACK(clean_frame->devaddr)].summary);
+        }
         else
             IncStackCrcStats(ctx, false, i);
-        CanLog(ctx, "fs: %d", ctx->monitor_faults[clean_frame->devaddr].summary);
+        
     }
 }
