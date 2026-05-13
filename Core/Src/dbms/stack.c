@@ -134,6 +134,7 @@ void SendSetStackTop(DbmsCtx* ctx)
     HAL_Delay(1);
 }
 
+// Manually sets stack to a specific device
 void SendSetStackTopManual(DbmsCtx* ctx, int devaddr)
 {
     // Sets all devices as stack devices
@@ -178,17 +179,13 @@ void StackAutoAddr(DbmsCtx* ctx)
 
 void StackReverseAutoAddr(DbmsCtx* ctx)
 {
-    // uint8_t frame_change_base_dev_dir[] = {0x90, 0x30, 0x09, 0x80, 0x00, 0x00};
-    // SendStackFrameSetCrc(ctx, frame_change_base_dev_dir, sizeof(frame_change_base_dev_dir));
     SINGLE_DEV_WRITE(ctx, 0x00, 0x309, DATA(0x80)); // change base device direction
-    // uint8_t frame_reverse_broadcast_dir[] = {0xE0, 0x30, 0x09, 0x80, 0x00, 0x00};
     HAL_Delay(1);
     BROADCAST_REV_WRITE(ctx, 0x309, DATA(0x80)); // change all devices direction
     HAL_Delay(1);
-    // static uint8_t FRAME_ENABLE_REVERSE_AUTO_ADDR[] = {0xD0, 0x03, 0x09, 0x81, 0x0F, 0x74};
     BROADCAST_WRITE(ctx, 0x309, DATA(0x81)); // enable address writing while keeping direction reversed
     HAL_Delay(1);
-    SendReverseAutoAddr(ctx); // Send reverse address N_STACKDEVS -> N_STACKDEVS * 2
+    SendReverseAutoAddr(ctx); // Send reverse address
     HAL_Delay(1);
     SendSetStackTop(ctx); // Send stack top and bottom according to set addresses and direction
     HAL_Delay(1);
@@ -198,15 +195,12 @@ void StackReverseAutoAddr(DbmsCtx* ctx)
 
 void StackReverseCommDir(DbmsCtx* ctx, bool direction)
 {
-    uint8_t dir = direction ? 0x00 : 0x80;
-    // uint8_t frame_change_base_dev_dir[] = {0x90, 0x00, 0x03, 0x09, dir, 0x00, 0x00};
-    SINGLE_DEV_WRITE(ctx, 0x00, 0x309, DATA(dir));       
-    // uint8_t frame_reverse_broadcast_dir[] = {0xE0, 0x30, 0x09, 0x80, 0x00, 0x00};
+    uint8_t dir = direction ? 0x00 : 0x80; // 0x00 = forward, 0x80 = reverse
+    SINGLE_DEV_WRITE(ctx, 0x00, 0x309, DATA(dir)); // change base device direction
     HAL_Delay(1);
-    BROADCAST_REV_WRITE(ctx, 0x309, DATA(dir));
+    BROADCAST_REV_WRITE(ctx, 0x309, DATA(dir)); // change all devices direction
     HAL_Delay(1);
-    // static uint8_t FRAME_ENABLE_REVERSE_AUTO_ADDR[] = {0xD0, 0x03, 0x09, 0x81, 0x0F, 0x74};
-    // BROADCAST_WRITE(ctx, 0x309, DATA(dir));
+    // if stack has already been readdressed (when there is a fault) do not override that stack top
     if (!ctx->stack_readdressed) SendSetStackTop(ctx);
     ctx->stack_dir = direction;
     ctx->stack_dir_change_ts = GetUs(ctx);
@@ -214,9 +208,6 @@ void StackReverseCommDir(DbmsCtx* ctx, bool direction)
 
 void SendReverseAutoAddr(DbmsCtx* ctx)
 {
-    // uint8_t frame_addr_dev[] = {0xD0, 0x03, 0x07, 0x00, 0x00, 0x00};
-    // BROADCAST_WRITE(ctx, 0x309, DATA(0x81));
-    HAL_Delay(1);
     for (int i = 0; i < N_STACKDEVS; i++)
     {
         BROADCAST_WRITE(ctx, 0x307, DATA(i));
@@ -224,39 +215,38 @@ void SendReverseAutoAddr(DbmsCtx* ctx)
     }
 }
 
+// Re addresses stack in both directions where there is a stack fault (disconnect in comms triggered by STACK_DISCONNECT fault)
 void StackReaddress(DbmsCtx* ctx)
 {
     ctx->stack_dir = true;
-    BROADCAST_WRITE(ctx, REG_CONTROL1, DATA(CTRL1_ADDR_WR));
+    BROADCAST_WRITE(ctx, REG_CONTROL1, DATA(CTRL1_ADDR_WR)); // Get devices ready to be addressed in forward direction
     HAL_Delay(1);
     SendAutoAddr(ctx);
     HAL_Delay(1);
-    BROADCAST_WRITE(ctx, REG_COMM_CTRL, DATA(COMM_STACK_DEV));
+    BROADCAST_WRITE(ctx, REG_COMM_CTRL, DATA(COMM_STACK_DEV)); // Set all devices to stack devices
     HAL_Delay(1);
-    // Sets bridge device as non-stack device and bottom of stack
-    SINGLE_DEV_WRITE(ctx, 0, REG_COMM_CTRL, DATA(0x00));
+    SINGLE_DEV_WRITE(ctx, 0, REG_COMM_CTRL, DATA(0x00)); // Sets bridge device as non-stack device and bottom of stack
     HAL_Delay(1);
-    SendStackTopTrialNError(ctx);
+    SendStackTopTrialNError(ctx); // Use trial and error to determine what device is top of stack and set it
     HAL_Delay(1);
-    ctx->stack_dir = false;
+    
+    ctx->stack_dir = false; // We are reversing now
     SINGLE_DEV_WRITE(ctx, 0x00, 0x309, DATA(0x80)); // change base device direction
-    // uint8_t frame_reverse_broadcast_dir[] = {0xE0, 0x30, 0x09, 0x80, 0x00, 0x00};
     HAL_Delay(1);
     BROADCAST_REV_WRITE(ctx, 0x309, DATA(0x80)); // change all devices direction
     HAL_Delay(1);
-    // static uint8_t FRAME_ENABLE_REVERSE_AUTO_ADDR[] = {0xD0, 0x03, 0x09, 0x81, 0x0F, 0x74};
     BROADCAST_WRITE(ctx, 0x309, DATA(0x81)); // enable address writing while keeping direction reversed
     HAL_Delay(1);
     SendReverseAutoAddr(ctx);
     HAL_Delay(1);
-    BROADCAST_WRITE(ctx, REG_COMM_CTRL, DATA(COMM_STACK_DEV));
+    BROADCAST_WRITE(ctx, REG_COMM_CTRL, DATA(COMM_STACK_DEV)); // Set all devices to stack device
     HAL_Delay(1);
-    // Sets bridge device as non-stack device and bottom of stack
-    SINGLE_DEV_WRITE(ctx, 0, REG_COMM_CTRL, DATA(0x00));
+    SINGLE_DEV_WRITE(ctx, 0, REG_COMM_CTRL, DATA(0x00)); // Sets bridge device as non-stack device and bottom of stack
     HAL_Delay(1);
-    SendStackTopTrialNError(ctx);
+    SendStackTopTrialNError(ctx); // Use trial and error to determine what device is top of stack and set it
 }
 
+// Sends a single device read to all devices and sets stack top as the last device that responded
 void SendStackTopTrialNError(DbmsCtx* ctx)
 {
     int i, status;
@@ -269,6 +259,7 @@ void SendStackTopTrialNError(DbmsCtx* ctx)
         if ((status = HAL_UART_Receive(ctx->hw.uart, buf, RX_FRAME_SIZE(1), STACK_RECV_TIMEOUT)) != 0)
         {
         }
+        // Check if there was a valid response
         bool zeros = true;
         for (int j = 0; j < 10; j++) 
         {
@@ -278,10 +269,10 @@ void SendStackTopTrialNError(DbmsCtx* ctx)
                 break;
             }
         }
-        if (zeros) break;
+        if (zeros) break; // If there was an invalid response, set previous device (i-1) as stack top
         HAL_Delay(1);
     }
-    SendSetStackTopManual(ctx, i-1);
+    SendSetStackTopManual(ctx, i-1); // Set the device to stack top 
 }
 
 
