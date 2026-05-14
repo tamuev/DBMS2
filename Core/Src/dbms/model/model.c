@@ -30,13 +30,14 @@ float F_Q(float Q0, float Qd) // calculates remaining charge
     return Q0 - Qd;
 }
 
-//  
-//  Find the max current of the battery for 
+//
+//  Find the max current of the battery for
 //  OC or RC path based on Q_h and Q_l
 //
 float F_Q_max(float T_bar, float Q_h, float Q_l)
 {
-    return ((T_bar - T_L_PT) / (T_H_PT - T_L_PT)) * (Q_h - Q_l) + Q_l;
+    T_bar = CLAMP(T_bar, TEMPS[0], TEMPS[N_TEMPS - 1]);
+    return ((T_bar - TEMPS[0]) / (TEMPS[N_TEMPS - 1] - TEMPS[0])) * (Q_h - Q_l) + Q_l;
 }
 
 //
@@ -48,50 +49,59 @@ float F_Z(float Q, float Q_max)
     return CLAMP(Q / Q_max, 0.0f, 1.0f);
 }
 
-// 
-//  Forward evil LUT (Z -> ?)
-//  Where the input is at descrete
-//  intervals
 //
-float LookupFromZ(float z, float T_bar, float* x_t_lows, float* x_t_highs, float n)
+//  Forward LUT (Z -> ?)
+//  Interpolates a [N_TEMPS x cols] table by SOC (z) and temperature (T_bar)
+//
+float LookupFromZ(float z, float T_bar, const float* table, int n, int cols)
 {
-    T_bar = CLAMP(T_bar, T_L_PT, T_H_PT);
+    T_bar = CLAMP(T_bar, TEMPS[0], TEMPS[N_TEMPS - 1]);
 
-    float i_true = n - z * n;
-    int i_low = floorf(i_true);
-    int i_high = ceilf(i_true);
-    float i_k = i_true - i_low; 
+    // SOC interpolation index (table is high-SOC-first)
+    float i_true = (float)n - z * (float)n;
+    int i_low = (int)floorf(i_true);
+    int i_high = (int)ceilf(i_true);
+    float i_k = i_true - i_low;
 
     i_low = CLAMP(i_low, 0, n - 1);
     i_high = CLAMP(i_high, 0, n - 1);
 
-    float a = x_t_lows[i_low];
-    float b = x_t_lows[i_high];
-    float x_t_low = (b-a) * i_k + a;
+    // Find bracketing temperature indices
+    int t_idx = 0;
+    for (int i = 0; i < N_TEMPS - 1; i++) {
+        if (TEMPS[i + 1] <= T_bar) t_idx = i + 1;
+    }
+    if (t_idx >= N_TEMPS - 1) t_idx = N_TEMPS - 2;
+    int t_idx_next = t_idx + 1;
+    float T_frac = (T_bar - TEMPS[t_idx]) / (TEMPS[t_idx_next] - TEMPS[t_idx]);
 
-    a = x_t_highs[i_low];
-    b = x_t_highs[i_high];
-    float x_t_high = (b-a) * i_k + a;
+    // Interpolate along SOC at both bracketing temperatures
+    float a = table[t_idx * cols + i_low];
+    float b = table[t_idx * cols + i_high];
+    float val_lo = (b - a) * i_k + a;
 
-    return (x_t_high - x_t_low) * 
-            ( (T_bar - T_L_PT) / (T_H_PT - T_L_PT) ) + x_t_low;
+    a = table[t_idx_next * cols + i_low];
+    b = table[t_idx_next * cols + i_high];
+    float val_hi = (b - a) * i_k + a;
+
+    // Interpolate between temperatures
+    return (val_hi - val_lo) * T_frac + val_lo;
 }
 
 //
-//  Calc OCV 
+//  Calc OCV
 //
 float F_OCV(float z, float T_bar)
 {
-    return LookupFromZ(z, T_bar, (float*)ocv_t_low, (float*)ocv_t_high, N_OCV_ENTRIES-1);
+    return LookupFromZ(z, T_bar, (const float*)ocv_table, N_OCV_ENTRIES - 1, N_OCV_ENTRIES);
 }
 
 //
-//  Calc ECM RC metrics
+//  Calc DCIR from lookup table
 //
-float F_RC_R(float z, float T_bar, int r_n)
+float F_DCIR_lookup(float z, float T_bar)
 {
-    r_n = CLAMP(r_n, 0, 3-1);
-    return LookupFromZ(z, T_bar, (float*)rc_t_low[r_n], (float*)rc_t_high[r_n], N_RC_ENTRIES-1);
+    return LookupFromZ(z, T_bar, (const float*)dcir_table, N_DCIR_ENTRIES - 1, N_DCIR_ENTRIES);
 }
 
 //
@@ -126,14 +136,10 @@ void ComputeModel(Model* m, float T_bar, float I, float Q0, float Qd, float V_pa
     }
     else m->R_oc = 0;
     
-    // RC/ECM Path
+    // RC/ECM Path (single DCIR lookup)
     float Q_max_rc = F_Q_max(T_bar, Q_BOUND_H_RC, Q_BOUND_L_RC);
     m->z_rc = F_Z(m->Q, Q_max_rc);
-    m->R0 = F_RC_R(m->z_rc, T_bar, 0);
-    m->R1 = F_RC_R(m->z_rc, T_bar, 1);
-    m->R2 = F_RC_R(m->z_rc, T_bar, 2);
-
-    m->R_rc = ((m->R0 + m->R1 + m->R2));
+    m->R_rc = F_DCIR_lookup(m->z_rc, T_bar);
 
     m->R_cell = (MAX(m->R_oc, m->R_rc));
 
