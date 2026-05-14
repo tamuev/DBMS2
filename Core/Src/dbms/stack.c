@@ -13,16 +13,18 @@
 
 static uint8_t bad_therms[] = {
     CELL_BYTE(5, 12),
-    CELL_BYTE(8, 11)
-    // CELL_BYTE(3, 12),
-    // CELL_BYTE(6, 11)
+    CELL_BYTE(8, 11),
+    CELL_BYTE(1, 0),
+    CELL_BYTE(7, 9),
+    CELL_BYTE(4, 0),
+    CELL_BYTE(4, 4)
 };
 
 bool IsThermBad(uint8_t side, uint8_t group)
 {
     for (int i = 0; i < sizeof(bad_therms); ++i) 
     {
-        if (CELL_BYTE(side, group) == bad_therms[i]) return false;
+        if (CELL_BYTE(side, group) == bad_therms[i]) return true;
     }
     return false;
 }
