@@ -1,9 +1,9 @@
-/** 
- * 
+/**
+ *
  * Distributed BMS      Stack Controller Module
  *
  * Copyright (C) 2025   Texas A&M University
- * 
+ *
  *                      Justus Languell  <justus@tamu.edu>
  *                      Cam Stone        <cameron28202@tamu.edu>
  *                      Abhinav Akavaram <abhinav.akavaram@tamu.edu>
@@ -11,29 +11,16 @@
  */
 #include "stack.h"
 
-static uint8_t bad_therms[] = {
-    CELL_BYTE(5, 12),
-    CELL_BYTE(8, 11),
-    CELL_BYTE(1, 0),
-    CELL_BYTE(7, 9),
-    CELL_BYTE(4, 0),
-    CELL_BYTE(4, 4)
-};
-
-bool IsThermBad(uint8_t side, uint8_t group)
+static bool IsThermBad(DbmsCtx* ctx, uint8_t side, uint8_t therm)
 {
-    for (int i = 0; i < sizeof(bad_therms); ++i) 
-    {
-        if (CELL_BYTE(side, group) == bad_therms[i]) return true;
-    }
-    return false;
+    return (ctx->bad_therm_mask[side] >> therm) & 1;
 }
 
 /**
  * Sends a wake blip to the battery stack
- * 
- * @param ctx Context pointer 
- * @return Error code 
+ *
+ * @param ctx Context pointer
+ * @return Error code
  */
 int SendStackWakeBlip(DbmsCtx* ctx)
 {
@@ -41,9 +28,9 @@ int SendStackWakeBlip(DbmsCtx* ctx)
 }
 /**
  * Sends a shutdown blip to the battery stack
- * 
- * @param ctx Context pointer 
- * @return Error code 
+ *
+ * @param ctx Context pointer
+ * @return Error code
  */
 int SendStackShutdownBlip(DbmsCtx* ctx)
 {
@@ -52,9 +39,9 @@ int SendStackShutdownBlip(DbmsCtx* ctx)
 
 /**
  * @brief Wake the battery stack
- * 
- * @param ctx Context pointer 
- * @return Error code 
+ *
+ * @param ctx Context pointer
+ * @return Error code
  */
 int StackWake(DbmsCtx* ctx)
 {
@@ -81,9 +68,9 @@ int StackWake(DbmsCtx* ctx)
  * @brief Shuts down the battery stack
  * Use this when we turn the vehicle off, or when going to sleep
  * We could also use this in response to a critical fault
- * 
- * @param ctx Context pointer 
- * @return Error code 
+ *
+ * @param ctx Context pointer
+ * @return Error code
  */
 int StackShutdown(DbmsCtx* ctx)
 {
@@ -115,7 +102,7 @@ void SendOtpEccDatain(DbmsCtx* ctx)
 }
 
 void SendAutoAddr(DbmsCtx* ctx)
-{    
+{
     for (int i = 0; i <= N_STACKDEVS; i++)
     {
         BROADCAST_WRITE(ctx, REG_DIR0_ADDR, DATA(0x00 + i));
@@ -148,8 +135,8 @@ void ReadOtpEccDatain(DbmsCtx* ctx)
 
 /**
  * @brief Full auto addressing procedure
- * 
- * @param ctx Context pointer 
+ *
+ * @param ctx Context pointer
  */
 void StackAutoAddr(DbmsCtx* ctx)
 {
@@ -167,9 +154,9 @@ void StackAutoAddr(DbmsCtx* ctx)
 
 /**
  * @brief Set the number of active cells in the stack
- * 
- * @param ctx Context pointer 
- * @param n_active_cells 
+ *
+ * @param ctx Context pointer
+ * @param n_active_cells
  */
 void StackSetNumActiveCells(DbmsCtx* ctx, uint8_t n_active_cells)
 {
@@ -179,13 +166,13 @@ void StackSetNumActiveCells(DbmsCtx* ctx, uint8_t n_active_cells)
 
 
 /*****************************
- *  VOLTAGE/TEMP READINGS 
+ *  VOLTAGE/TEMP READINGS
  *****************************/
 
 /**
  * @brief Enable the voltage tap ADCs
- * 
- * @param ctx Context pointer 
+ *
+ * @param ctx Context pointer
  */
 void StackSetupVoltReadings(DbmsCtx* ctx)
 {
@@ -195,8 +182,8 @@ void StackSetupVoltReadings(DbmsCtx* ctx)
 
 /**
  * @brief Request and populate voltage readings for the whole stack
- * 
- * @param ctx Context pointer 
+ *
+ * @param ctx Context pointer
  */
 void StackUpdateAllVoltReadings(DbmsCtx* ctx)
 {
@@ -226,8 +213,8 @@ void StackUpdateAllVoltReadings(DbmsCtx* ctx)
 
 /**
  * @brief Configure's stack GPIO for temp mux and LEDs
- * 
- * @param ctx Context pointer 
+ *
+ * @param ctx Context pointer
  */
 void StackSetupGpio(DbmsCtx* ctx)
 {
@@ -249,8 +236,8 @@ void StackSetupGpio(DbmsCtx* ctx)
 
 /**
  * @brief Configure the heartbeat timeout
- * 
- * @param ctx Context pointer 
+ *
+ * @param ctx Context pointer
  */
 void StackConfigTimeout(DbmsCtx* ctx)
 {
@@ -268,7 +255,7 @@ void StackUpdateAllTempReadings(DbmsCtx* ctx)
     size_t expected_rx_size = RX_FRAME_SIZE(data_size) * N_MONITORS;
 
     StackRead(ctx, rx_buffer_t, STACK_T_REG_START, data_size, expected_rx_size);
-    
+
     for (size_t i = 0; i < N_MONITORS; i++)
     {
         IncStackCrcStats(ctx, true, i);
@@ -276,7 +263,7 @@ void StackUpdateAllTempReadings(DbmsCtx* ctx)
         uint8_t* data = rx_buffer_t + (i * RX_FRAME_SIZE(data_size));
         for (j = 0; data[0] != (STACK_T_REG_START & 0xFF) && j < 1024; j++) { data++; }
         if (j >= 1024 || j < 3) continue;
-        RxStackFrameTemps* clean_frame = (RxStackFrameTemps*)(data - 3); 
+        RxStackFrameTemps* clean_frame = (RxStackFrameTemps*)(data - 3);
         if (clean_frame->crc == CALC_CRC_Rx(clean_frame))
             UpdateTemps(ctx, clean_frame);
         else{
@@ -294,7 +281,7 @@ void UpdateTemps(DbmsCtx* ctx, RxStackFrameTemps* frame)
     for (size_t j = 0; j < temps; j++)
     {
         uint16_t raw = (moved_data[j * sizeof(int16_t)] << 8) + moved_data[j * sizeof(int16_t) + 1];
-        ctx->cell_states[ADDR_BCAST_TO_STACK(frame->devaddr)].temps[N_TEMPS_POLL_PER_MONITOR*j + offset] = 
+        ctx->cell_states[ADDR_BCAST_TO_STACK(frame->devaddr)].temps[N_TEMPS_POLL_PER_MONITOR*j + offset] =
             ThermVoltToTemp(ctx, MAX(0, raw * STACK_T_UV_PER_BIT / 1000000.0));
     }
 }
@@ -315,7 +302,7 @@ void UpdateVoltages(DbmsCtx* ctx, RxStackFrameVoltages* frame)
 int StackRead(DbmsCtx* ctx, uint8_t* raw, uint16_t start_reg, uint8_t data_size, int expected_size)
 {
     int status = 0;
-    if ((status = STACK_READ(ctx, start_reg, data_size)) != 0) 
+    if ((status = STACK_READ(ctx, start_reg, data_size)) != 0)
     {
         return status;
     }
@@ -333,8 +320,8 @@ int StackRead(DbmsCtx* ctx, uint8_t* raw, uint16_t start_reg, uint8_t data_size,
 
 /**
  * @brief Replace missing thermistor readings with the average of the valid cells
- * 
- * @param ctx Context pointer 
+ *
+ * @param ctx Context pointer
  */
 void FillMissingTempReadings(DbmsCtx* ctx)
 {
@@ -373,17 +360,18 @@ void FillMissingTempReadings(DbmsCtx* ctx)
 }
 
 /**
- * @brief Compute min, avg, max voltages and temperatures 
- * 
- * @param ctx Context pointer 
+ * @brief Compute min, avg, max voltages and temperatures
+ *
+ * @param ctx Context pointer
  */
 void StackCalcStats(DbmsCtx* ctx)
 {
     float v_min = 999999.0f, v_max = 0.0f, v_sum = 0.0f;
     float t_min = 999.0f,    t_max = 0.0f, t_sum = 0.0f;
-    uint8_t v_max_cell = CELL_BYTE_NA, 
-            v_min_cell = CELL_BYTE_NA, 
-            t_max_cell = CELL_BYTE_NA, 
+    int t_count = 0;
+    uint8_t v_max_cell = CELL_BYTE_NA,
+            v_min_cell = CELL_BYTE_NA,
+            t_max_cell = CELL_BYTE_NA,
             t_min_cell = CELL_BYTE_NA;
 
     for (int i = 0; i < N_SIDES; i++)
@@ -409,9 +397,10 @@ void StackCalcStats(DbmsCtx* ctx)
 
         for (int j = 0; j < N_TEMPS_PER_SIDE; j++)
         {
-            if (IsThermBad(i, j)) continue;
+            if (IsThermBad(ctx, i, j)) continue;
 
             float t = ctx->cell_states[i].temps[j];
+            t_count++;
 
             if (t < t_min)
             {
@@ -436,7 +425,7 @@ void StackCalcStats(DbmsCtx* ctx)
 
     ctx->stats.min_t = t_min;
     ctx->stats.max_t = t_max;
-    ctx->stats.avg_t = t_sum / (N_SIDES * N_TEMPS_PER_SIDE - sizeof(bad_therms));
+    ctx->stats.avg_t = t_count > 0 ? t_sum / t_count : 0.0f;
 
     ctx->stats.min_v_cell = v_min_cell;
     ctx->stats.max_v_cell = v_max_cell;
@@ -506,7 +495,7 @@ void MonitorLedBlink(DbmsCtx* ctx)
 }
 
 /*****************************
- *  BALANCING 
+ *  BALANCING
  *****************************/
 
 void StackBalancingConfig(DbmsCtx* ctx)
@@ -526,7 +515,7 @@ void StackSetDeviceBalanceTimers(DbmsCtx* ctx, uint8_t side, bool odds, StackBal
     {
         uint16_t reg_addr = base_reg - i; // registers decrement
         uint8_t timer_val = i % 2 == odds && cells_to_bal[i] ? bal_time : 0x00;
-        
+
         SINGLE_DEV_WRITE(ctx, ADDR_STACK_TO_BCAST(side), reg_addr, DATA(timer_val));
         HAL_Delay(2);  // small delay between writes
     }
@@ -535,7 +524,7 @@ void StackSetDeviceBalanceTimers(DbmsCtx* ctx, uint8_t side, bool odds, StackBal
 void StackStartDeviceBalancing(DbmsCtx* ctx, uint8_t dev_addr)
 {
     // this is the final trigger - balancing doesn't start until bal_ctrl2 is set
-    //#define BAL_CTRL2_BAL_GO_MASK 0x02    
+    //#define BAL_CTRL2_BAL_GO_MASK 0x02
     SINGLE_DEV_WRITE(ctx, dev_addr, REG_BAL_CTRL2, DATA(BAL2_BAL_GO));
     HAL_Delay(8);
 }
@@ -554,10 +543,10 @@ void StackComputeCellsToBalance(DbmsCtx* ctx, bool odds, int32_t threshold_mv)
 {
     // if any segment needs balancing - if this is false at the end we can skip balancing
     float balance_threshold = ctx->charging.pre_bal_min_v + threshold_mv;
-    CanLog(ctx, "minv = %d maxv = %d dv = %d chbalth = %d\n", 
-        (int)ctx->charging.pre_bal_min_v, 
-        (int)ctx->charging.pre_bal_max_v, 
-        (int)(ctx->charging.pre_bal_max_v-ctx->charging.pre_bal_min_v), 
+    CanLog(ctx, "minv = %d maxv = %d dv = %d chbalth = %d\n",
+        (int)ctx->charging.pre_bal_min_v,
+        (int)ctx->charging.pre_bal_max_v,
+        (int)(ctx->charging.pre_bal_max_v-ctx->charging.pre_bal_min_v),
         (int)balance_threshold);
     // if (ctx->stats.max_v > balance_threshold) return false;
     for (size_t side = 0; side < N_SIDES; side++)
@@ -567,7 +556,7 @@ void StackComputeCellsToBalance(DbmsCtx* ctx, bool odds, int32_t threshold_mv)
             float voltage = ctx->charging.pre_bal_average_v[side][group];
             ctx->cell_states[side].cells_to_balance[group] = voltage > balance_threshold && group % 2 == odds;
             CanLog(ctx, "%d ", (int) ctx->charging.pre_bal_average_v[side][group]);
-        }   
+        }
         CanLog(ctx, "\n");
     }
 }
@@ -598,7 +587,7 @@ void StackDumpCellsToBalance(DbmsCtx* ctx)
         side_str[2] = ' ';
         side_str[3] = '\0';
         CanLog(ctx, side_str);
-        
+
         bool found_any = false;
         for (size_t group = 0; group < N_GROUPS_PER_SIDE; ++group)
         {
@@ -614,12 +603,12 @@ void StackDumpCellsToBalance(DbmsCtx* ctx)
                 found_any = true;
             }
         }
-        
+
         if (!found_any)
         {
             CanLog(ctx, "None");
         }
-        
+
         CanLog(ctx, "\n");
     }
 }
@@ -630,16 +619,16 @@ void StackDumpCellsToBalance(DbmsCtx* ctx)
 
 /**
  * @brief Set the active channel on the analog multiplexers
- * 
+ *
  * Each monitor chip has two 4:1 analog multiplexers (Mux A and Mux B) that expand
  * the number of thermistors that can be read. The mux select lines are controlled
  * via GPIO pins on the monitor ics.
- * 
+ *
  * GPIO Configuration (register 0x0E):
  * - Bits [1:0]: Mux A select (S0, S1)
- * - Bits [3:2]: Mux B select (S0, S1) 
+ * - Bits [3:2]: Mux B select (S0, S1)
  * - Bits [7:4]: Other GPIO config (kept constant)
- * 
+ *
  * @param ctx Context pointer
  * @param dev_number Monitor chip device address
  * @param channel Mux channel to select (0-3)
@@ -666,7 +655,7 @@ int SetMuxChannels(DbmsCtx* ctx, uint8_t channel)
         default:
             return -1;
     }
-    
+
     ctx->mux_selector = channel;
     return STACK_WRITE(ctx, 0x000F, DATA(gpio_value));
 }

@@ -67,6 +67,8 @@
 #define CANID_RX_DELAY              0x0BC
 #define CANID_TX_DELAY              0x0BD
 
+#define CANID_RX_SET_BAD_THERM      0x0B0
+
 /* Extended IDs */
 
 #define CANID_CELLSTATE_VOLTS       0x0B002000

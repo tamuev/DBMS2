@@ -19,7 +19,7 @@
 
 #define SPLIT_STACK_OPS     1       // 1 = divide stack ops in half, every-other-iter, 0 = do not
 
-#define N_SEGMENTS          5       // number of segments in the stack
+#define N_SEGMENTS          1       // number of segments in the stack
 #define N_SIDES_PER_SEG     2       // number of sides per segment
 #define N_MONITORS_PER_SIDE 1       // number of monitors per side
 #define N_GROUPS_PER_SIDE   13      // number of voltages per side
@@ -295,6 +295,7 @@ typedef struct _Flags {
     bool has_balanced;
     bool shutdown_requested;
     bool shutdown_stack_requested;
+    bool need_to_save_bad_therms;
 } Flags;
 
 typedef struct _ChargeStats {
@@ -377,6 +378,7 @@ typedef struct _DbmsCtx
     LedState led_state;
     DbmsSettings* settings;
     CellMonitorState cell_states[N_SIDES];
+    uint16_t bad_therm_mask[N_SIDES];
     uint8_t mux_selector;
     Realtime realtime;
     Timing timing;

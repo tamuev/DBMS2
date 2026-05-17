@@ -1,9 +1,9 @@
-/** 
- * 
+/**
+ *
  * Distributed BMS      EEPROM Storage Interface
  *
  * Copyright (C) 2025   Texas A&M University
- * 
+ *
  *                      Justus Languell  <justus@tamu.edu>
  *                      Cam Stone        <cameron28202@tamu.edu>
  *                      Abhinav Akavaram <abhinav.akavaram@tamu.edu>
@@ -29,6 +29,7 @@
 #define EEPROM_BLACKBOX_META_ADDR       (2 * EEPROM_PAGE_SIZE)
 #define EEPROM_BLACKBOX_BASE_ADDR       (3 * EEPROM_PAGE_SIZE)
 #define EEPROM_DEBUG                    (4 * EEPROM_PAGE_SIZE)
+#define EEPROM_BAD_THERM_MASK_ADDR      (5 * EEPROM_PAGE_SIZE)
 
 #define ERR_CRC_MISMATCH 24
 
