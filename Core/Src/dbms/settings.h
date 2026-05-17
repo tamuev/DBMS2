@@ -1,9 +1,9 @@
-/** 
- * 
+/**
+ *
  * Distributed BMS      Configuration/Setting System
  *
  * Copyright (C) 2025   Texas A&M University
- * 
+ *
  *                      Justus Languell  <justus@tamu.edu>
  *                      Cam Stone        <cameron28202@tamu.edu>
  *                      Abhinav Akavaram <abhinav.akavaram@tamu.edu>
@@ -59,7 +59,7 @@ enum _UserSettingIndex
 
     LOW_PLAUSIBLE_TEMP,
     HIGH_PLAUSIBLE_TEMP,
-  
+
     PRECHARGE_ON_TH,
     PRECHARGE_OFF_TH,
 
