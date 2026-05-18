@@ -114,6 +114,8 @@ int DbmsPerformWakeup(DbmsCtx* ctx)
     ctx->stack_dir = true;
     ctx->stack_dir_change_ts = 0;
     ctx->stack_readdressed = false;
+    ctx->n_fwd_monitors = N_MONITORS;
+    ctx->n_rev_monitors = N_MONITORS;
     HAL_Delay(5);
     StackAutoAddr(ctx);
     HAL_Delay(5);

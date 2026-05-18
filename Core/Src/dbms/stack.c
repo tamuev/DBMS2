@@ -271,10 +271,14 @@ void SendStackTopTrialNError(DbmsCtx* ctx)
                 break;
             }
         }
-        if (zeros) break; // If there was an invalid response, set previous device (i-1) as stack top
+        if (zeros) break;
         HAL_Delay(1);
     }
-    SendSetStackTopManual(ctx, i-1); // Set the device to stack top 
+    if (ctx->stack_dir)
+        ctx->n_fwd_monitors = i;
+    else
+        ctx->n_rev_monitors = i;
+    if (i > 0) SendSetStackTopManual(ctx, i - 1);
 }
 
 
@@ -316,11 +320,12 @@ void StackUpdateAllVoltReadings(DbmsCtx* ctx)
     static uint8_t rx_buffer_v[1024];
     int j;
     memset(rx_buffer_v, 0, sizeof(rx_buffer_v));
+    size_t active_monitors = ctx->stack_dir ? ctx->n_fwd_monitors : ctx->n_rev_monitors;
     size_t data_size = N_GROUPS_PER_SIDE * sizeof(int16_t);
-    size_t expected_rx_size = RX_FRAME_SIZE(data_size) * N_MONITORS;
+    size_t expected_rx_size = RX_FRAME_SIZE(data_size) * active_monitors;
 
     StackRead(ctx, rx_buffer_v, STACK_V_REG_START, data_size, expected_rx_size);
-    for (size_t i = 0; i < N_MONITORS; i++)
+    for (size_t i = 0; i < active_monitors; i++)
     {
         IncStackCrcStats(ctx, true, i);
         // TODO: test without on new battery to see if this is necessary
@@ -376,12 +381,13 @@ void StackUpdateAllTempReadings(DbmsCtx* ctx)
     static uint8_t rx_buffer_t[1024];
     int j;
     memset(rx_buffer_t, 0, sizeof(rx_buffer_t));
+    size_t active_monitors = ctx->stack_dir ? ctx->n_fwd_monitors : ctx->n_rev_monitors;
     size_t data_size = (N_TEMPS_POLL_PER_MONITOR + 2) * sizeof(int16_t); // +2 for GPIO mismatch
-    size_t expected_rx_size = RX_FRAME_SIZE(data_size) * N_MONITORS;
+    size_t expected_rx_size = RX_FRAME_SIZE(data_size) * active_monitors;
 
     StackRead(ctx, rx_buffer_t, STACK_T_REG_START, data_size, expected_rx_size);
-    
-    for (size_t i = 0; i < N_MONITORS; i++)
+
+    for (size_t i = 0; i < active_monitors; i++)
     {
         IncStackCrcStats(ctx, true, i);
         // TODO: test without on new battery to see if this is necessary

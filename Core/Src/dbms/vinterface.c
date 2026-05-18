@@ -197,6 +197,11 @@ int SendMetrics(DbmsCtx* ctx)
 
     SendMetric(ctx, 97, ctx->stats.n_can_bussoffs);
 
+    SendMetric(ctx, 100, ctx->stack_dir);
+    SendMetric(ctx, 101, ctx->n_fwd_monitors);
+    SendMetric(ctx, 102, ctx->n_rev_monitors);
+    SendMetric(ctx, 103, ctx->stack_readdressed);
+
     return 0;
 }
 
