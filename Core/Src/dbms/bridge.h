@@ -1,9 +1,9 @@
-/** 
- * 
+/**
+ *
  * Distributed BMS      Bridge I/O Interface
  *
  * Copyright (C) 2025   Texas A&M University
- * 
+ *
  *                      Justus Languell  <justus@tamu.edu>
  *                      Cam Stone        <cameron28202@tamu.edu>
  *                      Abhinav Akavaram <abhinav.akavaram@tamu.edu>
@@ -38,7 +38,7 @@ int SendUARTFrame(DbmsCtx* ctx, uint8_t* buf, size_t len);
 /**
  * @brief Sends a data frame to the stack via UART with
  * a CRC appended to the end for verification
- * 
+ *
  * @param ctx Context pointer
  * @param buf The data for the frame to send
  * @param len The length of the frame data
@@ -53,7 +53,7 @@ int SendStackFrameNDev(DbmsCtx* ctx, TxStackFrameNDev frame);
 /**
  * @brief Utility function to set the baud rate of the UART
  * Used for shutdown and wakeup
- * 
+ *
  * @param brr Some timing property
  */
 void SetBrr(uint64_t brr);
@@ -63,7 +63,7 @@ void SetBrr(uint64_t brr);
  * Right now the length of the blip is set by BRR.
  *
  * @todo Make it accept param as us or something more intuitive.
- * 
+ *
  * @param ctx Context pointer
  * @param brr Some timing poperty
  * @return Error code
