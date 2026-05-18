@@ -116,7 +116,7 @@ int DbmsPerformWakeup(DbmsCtx* ctx)
         ctx->led_state = LED_FIRMWARE_FAULT;
         return status; // we are cooked
     }
-    ctx->stack_dir = true;
+    ctx->stack_dir = STACK_DIR_FWD;
     ctx->stack_dir_change_ts = 0;
     ctx->stack_readdressed = false;
     ctx->n_fwd_monitors = N_MONITORS;
@@ -201,12 +201,14 @@ void DbmsHandleActive(DbmsCtx* ctx)
     HAL_Delay(5);
     if (ctx->stack_readdressed && GetUs(ctx) - ctx->stack_dir_change_ts > GetSetting(ctx, STACK_REVERSAL_SWITCHING_MS))
     {
-        StackReverseCommDir(ctx, !ctx->stack_dir);
+        if (ctx->stack_dir == STACK_DIR_FWD)
+            StackReverseCommDir(ctx, false);
+        else
+            StackReverseCommDir(ctx, true);
+
         if (ctx->flags.active)
-        {
             MonitorLedBlink(ctx);
-        }
-    } 
+    }
     // MonitorLedBlink(ctx);
     StackUpdateAllVoltReadings(ctx);
     HAL_Delay(10);

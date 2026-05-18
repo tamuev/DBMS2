@@ -371,6 +371,12 @@ typedef struct _Charging {
     bool only_balance;
 } Charging;
 
+typedef enum _StackDirection
+{
+    STACK_DIR_FWD = 0,
+    STACK_DIR_REV
+} StackDirection;
+
 typedef struct _DbmsCtx
 {
     HwCtx hw;
@@ -401,7 +407,7 @@ typedef struct _DbmsCtx
     Profiling profiling;
     Delay delay;
 
-    bool stack_dir;
+    StackDirection stack_dir;
     uint64_t stack_dir_change_ts;
     bool stack_readdressed;
     uint8_t n_fwd_monitors;

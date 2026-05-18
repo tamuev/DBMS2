@@ -1,9 +1,9 @@
-/** 
- * 
+/**
+ *
  * Distributed BMS      Stack Controller Module
  *
  * Copyright (C) 2025   Texas A&M University
- * 
+ *
  *                      Justus Languell  <justus@tamu.edu>
  *                      Cam Stone        <cameron28202@tamu.edu>
  *                      Abhinav Akavaram <abhinav.akavaram@tamu.edu>
@@ -31,7 +31,7 @@
 #define PACKED __attribute__((packed))
 
 #define ESWAP16(x) __builtin_bswap16(((uint16_t)(x)))
-#define ESWAP32(x) __builtin_bswap32((uint32_t)(x))  
+#define ESWAP32(x) __builtin_bswap32((uint32_t)(x))
 
 #define REQ_SINGLE_DEV_READ         0   // 0x08
 #define REQ_SINGLE_DEV_WRITE        1   // 0x09
@@ -133,9 +133,9 @@ DATA (                      \
 #define BAL2_FLTSTOP_EN         0x20
 #define BAL2_CB_PAUSE           0x40
 
-typedef struct PACKED _TxStackFrame1Dev 
+typedef struct PACKED _TxStackFrame1Dev
 {
-    uint8_t     cmd;             
+    uint8_t     cmd;
     uint8_t     devaddr;
     uint16_t    regaddr;
     uint8_t     data[MAX_TX_DATA];
@@ -144,9 +144,9 @@ typedef struct PACKED _TxStackFrame1Dev
                                                 is at f->data + f->len */
 } TxStackFrame1Dev;
 
-typedef struct PACKED _TxStackFrameNDev 
-{     
-    uint8_t     cmd;         
+typedef struct PACKED _TxStackFrameNDev
+{
+    uint8_t     cmd;
     uint16_t    regaddr;
     uint8_t     data[MAX_TX_DATA];
     uint16_t    __crc;                      /* extra buffer for CRC if all data bytes
@@ -184,7 +184,7 @@ typedef struct PACKED _RxStackFrameVoltages
 
 typedef struct PACKED _RxStackFrameTemps
 {
-    uint8_t     init; 
+    uint8_t     init;
     uint8_t     devaddr;
     uint16_t    regaddr;
     uint8_t     data[(N_TEMPS_POLL_PER_MONITOR + 2) * sizeof(uint16_t)]; // +2 GPIO  mismatch
@@ -193,16 +193,16 @@ typedef struct PACKED _RxStackFrameTemps
 
 /**
  * @brief Wake the battery stack
- * 
- * @param ctx Context pointer 
- * @return Error code 
+ *
+ * @param ctx Context pointer
+ * @return Error code
  */
 int StackWake(DbmsCtx* ctx);
 
 /**
  * @brief Full auto addressing procedure
- * 
- * @param ctx Context pointer 
+ *
+ * @param ctx Context pointer
  */
 void StackAutoAddr(DbmsCtx* ctx);
 void StackReverseAutoAddr(DbmsCtx* ctx);
@@ -214,9 +214,9 @@ void SendStackTopTrialNError(DbmsCtx* ctx);
 
 /**
  * @brief Set the number of active cells in the stack
- * 
- * @param ctx Context pointer 
- * @param n_active_cells 
+ *
+ * @param ctx Context pointer
+ * @param n_active_cells
  */
 void StackSetNumActiveCells(DbmsCtx* ctx, uint8_t n_active_cells);
 
@@ -229,35 +229,35 @@ void StackConfigTimeout(DbmsCtx* ctx);
  * @brief Shuts down the battery stack
  * Use this when we turn the vehicle off, or when going to sleep
  * We could also use this in response to a critical fault
- * 
- * @param ctx Context pointer 
- * @return Error code 
+ *
+ * @param ctx Context pointer
+ * @return Error code
  */
 int StackShutdown(DbmsCtx* ctx);
 
 
 /*****************************
- *  VOLTAGE/TEMP READINGS 
+ *  VOLTAGE/TEMP READINGS
  *****************************/
 
 /**
  * @brief Enable the voltage tap ADCs
- * 
- * @param ctx Context pointer 
+ *
+ * @param ctx Context pointer
  */
-void StackSetupVoltReadings(DbmsCtx* ctx); 
+void StackSetupVoltReadings(DbmsCtx* ctx);
 
 /**
  * @brief Request and populate voltage readings for the whole stack
- * 
- * @param ctx Context pointer 
+ *
+ * @param ctx Context pointer
  */
 void StackUpdateAllVoltReadings(DbmsCtx* ctx);
 
 /**
  * @brief Configure GPIOs for temp readings
- * 
- * @param ctx Context pointer 
+ *
+ * @param ctx Context pointer
  */
 void StackSetupGpio(DbmsCtx* ctx);
 
@@ -270,15 +270,15 @@ int StackRead(DbmsCtx* ctx, uint8_t* raw, uint16_t start_reg, uint8_t data_size,
 
 /**
  * @brief Replace missing thermistor readings with the average of the valid cells
- * 
- * @param ctx Context pointer 
+ *
+ * @param ctx Context pointer
  */
 void FillMissingTempReadings(DbmsCtx* ctx);
 
 /**
- * @brief Compute min, avg, max voltages and temperatures 
- * 
- * @param ctx Context pointer 
+ * @brief Compute min, avg, max voltages and temperatures
+ *
+ * @param ctx Context pointer
  */
 void StackCalcStats(DbmsCtx* ctx);
 
@@ -295,7 +295,7 @@ int ToggleMonitorLeds(DbmsCtx* ctx, bool on);
 void MonitorLedBlink(DbmsCtx* ctx);
 
 /*****************************
- *  BALANCING 
+ *  BALANCING
  *****************************/
 
 typedef enum {
@@ -310,7 +310,7 @@ void StackBalancingConfig(DbmsCtx* ctx);
 
 void StackStartBalancing(DbmsCtx* ctx, bool odds, int32_t bal_time);
 
-void StackSetDeviceBalanceTimers(DbmsCtx* ctx, uint8_t dev_addr, bool odds, 
+void StackSetDeviceBalanceTimers(DbmsCtx* ctx, uint8_t dev_addr, bool odds,
         StackBalanceTimes bal_time_idx);
 
 void StackComputeCellsToBalance(DbmsCtx* ctx, bool odds, int32_t threshold_mv);

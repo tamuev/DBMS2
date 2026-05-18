@@ -178,7 +178,7 @@ void StackReverseAutoAddr(DbmsCtx* ctx)
     HAL_Delay(1);
     SendSetStackTop(ctx); // Send stack top and bottom according to set addresses and direction
     HAL_Delay(1);
-    ctx->stack_dir = false;
+    ctx->stack_dir = STACK_DIR_REV;
     ctx->stack_dir_change_ts = GetUs(ctx);
 }
 
@@ -261,7 +261,7 @@ void SendStackTopTrialNError(DbmsCtx* ctx)
         if (zeros) break;
         HAL_Delay(1);
     }
-    if (ctx->stack_dir)
+    if (ctx->stack_dir == STACK_DIR_FWD)
         ctx->n_fwd_monitors = i;
     else
         ctx->n_rev_monitors = i;
@@ -307,7 +307,7 @@ void StackUpdateAllVoltReadings(DbmsCtx* ctx)
     static uint8_t rx_buffer_v[1024];
     int j;
     memset(rx_buffer_v, 0, sizeof(rx_buffer_v));
-    size_t active_monitors = ctx->stack_dir ? ctx->n_fwd_monitors : ctx->n_rev_monitors;
+    size_t active_monitors = ctx->stack_dir == STACK_DIR_FWD ? ctx->n_fwd_monitors : ctx->n_rev_monitors;
     size_t data_size = N_GROUPS_PER_SIDE * sizeof(int16_t);
     size_t expected_rx_size = RX_FRAME_SIZE(data_size) * active_monitors;
 
@@ -368,7 +368,7 @@ void StackUpdateAllTempReadings(DbmsCtx* ctx)
     static uint8_t rx_buffer_t[1024];
     int j;
     memset(rx_buffer_t, 0, sizeof(rx_buffer_t));
-    size_t active_monitors = ctx->stack_dir ? ctx->n_fwd_monitors : ctx->n_rev_monitors;
+    size_t active_monitors = ctx->stack_dir == STACK_DIR_FWD ? ctx->n_fwd_monitors : ctx->n_rev_monitors;
     size_t data_size = (N_TEMPS_POLL_PER_MONITOR + 2) * sizeof(int16_t); // +2 for GPIO mismatch
     size_t expected_rx_size = RX_FRAME_SIZE(data_size) * active_monitors;
 
