@@ -1,9 +1,9 @@
-/** 
- * 
+/**
+ *
  * Distributed BMS      CAN-Based Vehicle Interface
  *
  * Copyright (C) 2025   Texas A&M University
- * 
+ *
  *                      Justus Languell  <justus@tamu.edu>
  *                      Cam Stone        <cameron28202@tamu.edu>
  *                      Abhinav Akavaram <abhinav.akavaram@tamu.edu>
@@ -197,10 +197,17 @@ int SendMetrics(DbmsCtx* ctx)
 
     SendMetric(ctx, 97, ctx->stats.n_can_bussoffs);
 
+<<<<<<< HEAD
     SendMetric(ctx, 100, ctx->stack_dir);
     SendMetric(ctx, 101, ctx->n_fwd_monitors);
     SendMetric(ctx, 102, ctx->n_rev_monitors);
     SendMetric(ctx, 103, ctx->stack_readdressed);
+=======
+    for (int i = 0; i < N_SIDES; i++)
+    {
+        SendMetric(ctx, 98 + i, ctx->bad_therm_mask[i]);
+    }
+>>>>>>> master
 
     return 0;
 }
@@ -292,7 +299,7 @@ void SendPlexMetrics(DbmsCtx* ctx)
 void CanLog(DbmsCtx* ctx, const char* fmt, ...)
 {
     if (!ctx->flags.telem_enable) return;
-    
+
     char buffer[CAN_LOG_BUFFER_SIZE];
     va_list args;
     va_start(args, fmt);
@@ -316,7 +323,7 @@ void CanLog(DbmsCtx* ctx, const char* fmt, ...)
 
 
 /*****************************
- *      CELL DATA 
+ *      CELL DATA
  *****************************/
 
 #define PAD_BUFFER(SZ, K) (((SZ / K) + 1) * K)
@@ -363,7 +370,7 @@ int SendCellTemps(DbmsCtx* ctx)
         }
         SendCellDataBuffer(ctx, CANID_CELLSTATE_TEMPS, i, buffer, ARRAY_LEN(buffer));
     }
-    return 0;   
+    return 0;
 }
 
 int SendCellsToBalance(DbmsCtx* ctx)

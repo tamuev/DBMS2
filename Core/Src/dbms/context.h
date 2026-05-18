@@ -295,6 +295,7 @@ typedef struct _Flags {
     bool has_balanced;
     bool shutdown_requested;
     bool shutdown_stack_requested;
+    bool need_to_save_bad_therms;
 } Flags;
 
 typedef struct _ChargeStats {
@@ -377,6 +378,7 @@ typedef struct _DbmsCtx
     LedState led_state;
     DbmsSettings* settings;
     CellMonitorState cell_states[N_SIDES];
+    uint16_t bad_therm_mask[N_SIDES];
     uint8_t mux_selector;
     Realtime realtime;
     Timing timing;

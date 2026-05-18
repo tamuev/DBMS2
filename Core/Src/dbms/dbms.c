@@ -86,6 +86,11 @@ void DbmsInit(DbmsCtx* ctx)
     {
         // CanLog(ctx, "error loading initial charge %d\n", status);
     }
+
+    if ((status = LoadStoredObject(ctx, EEPROM_BAD_THERM_MASK_ADDR, ctx->bad_therm_mask, sizeof(ctx->bad_therm_mask))) != 0)
+    {
+        // CanLog(ctx, "error loading bad therm mask %d\n", status);
+    }
     ctx->initial_historic_accumulated_loss = ctx->qstats.historic_accumulated_loss;
     ctx->flags.need_to_reset_qstats = false;
 
@@ -262,6 +267,12 @@ void DbmsIter(DbmsCtx* ctx)
     ctx->stats.iters++;
     ctx->timing.iter_start_us = GetUs(ctx);
     // ctx->profiling.profiling.times.T0 = GetUs(ctx);
+
+    if (ctx->flags.need_to_save_bad_therms)
+    {
+        WriteEEPROM(ctx, EEPROM_BAD_THERM_MASK_ADDR, (uint8_t*)ctx->bad_therm_mask, sizeof(ctx->bad_therm_mask));
+        ctx->flags.need_to_save_bad_therms = false;
+    }
 
     /**
      * Handle blackbox data requested
@@ -559,6 +570,16 @@ void DbmsCanRx(DbmsCtx* ctx, CanRxChannel channel, CAN_RxHeaderTypeDef rx_header
 
     case CANID_RX_DO_BAL_LOOP:
         ctx->charging.bal_loop_hb = HAL_GetTick();
+        break;
+
+    case CANID_RX_SET_BAD_THERM:;
+        uint8_t bt_side = rx_data[0] >> 4;
+        uint8_t bt_therm = rx_data[0] & 0x0F;
+        if (rx_data[1])
+            ctx->bad_therm_mask[bt_side] |= (1 << bt_therm);
+        else
+            ctx->bad_therm_mask[bt_side] &= ~(1 << bt_therm);
+        ctx->flags.need_to_save_bad_therms = true;
         break;
 
 // TODO: remove this
