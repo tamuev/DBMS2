@@ -189,9 +189,8 @@ void StackReverseCommDir(DbmsCtx* ctx, StackDirection direction)
     HAL_Delay(1);
     BROADCAST_REV_WRITE(ctx, 0x309, DATA(dir)); // change all devices direction
     HAL_Delay(1);
-    // if stack has already been readdressed (when there is a fault) do not override that stack top
-    if (!ctx->stack_readdressed) SendSetStackTop(ctx);
     ctx->stack_dir = direction;
+    SendSetStackTop(ctx);
     ctx->stack_dir_change_ts = GetUs(ctx);
 }
 
