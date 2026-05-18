@@ -182,9 +182,9 @@ void StackReverseAutoAddr(DbmsCtx* ctx)
     ctx->stack_dir_change_ts = GetUs(ctx);
 }
 
-void StackReverseCommDir(DbmsCtx* ctx, bool direction)
+void StackReverseCommDir(DbmsCtx* ctx, StackDirection direction)
 {
-    uint8_t dir = direction ? 0x00 : 0x80; // 0x00 = forward, 0x80 = reverse
+    uint8_t dir = (direction == STACK_DIR_FWD) ? 0x00 : 0x80; // 0x00 = forward, 0x80 = reverse
     SINGLE_DEV_WRITE(ctx, 0x00, 0x309, DATA(dir)); // change base device direction
     HAL_Delay(1);
     BROADCAST_REV_WRITE(ctx, 0x309, DATA(dir)); // change all devices direction
@@ -207,7 +207,7 @@ void SendReverseAutoAddr(DbmsCtx* ctx)
 // Re addresses stack in both directions where there is a stack fault (disconnect in comms triggered by STACK_DISCONNECT fault)
 void StackReaddress(DbmsCtx* ctx)
 {
-    ctx->stack_dir = true;
+    ctx->stack_dir = STACK_DIR_FWD;
     BROADCAST_WRITE(ctx, REG_CONTROL1, DATA(CTRL1_ADDR_WR)); // Get devices ready to be addressed in forward direction
     HAL_Delay(1);
     SendAutoAddr(ctx);
@@ -219,7 +219,7 @@ void StackReaddress(DbmsCtx* ctx)
     SendStackTopTrialNError(ctx); // Use trial and error to determine what device is top of stack and set it
     HAL_Delay(1);
 
-    ctx->stack_dir = false; // We are reversing now
+    ctx->stack_dir = STACK_DIR_REV; // We are reversing now
     SINGLE_DEV_WRITE(ctx, 0x00, 0x309, DATA(0x80)); // change base device direction
     HAL_Delay(1);
     BROADCAST_REV_WRITE(ctx, 0x309, DATA(0x80)); // change all devices direction
@@ -244,7 +244,7 @@ void SendStackTopTrialNError(DbmsCtx* ctx)
     for (i = 0; i < N_MONITORS; i++)
     {
         memset(&buf, 0, sizeof(buf));
-        SINGLE_DEV_READ(ctx, i, ctx->stack_dir ? 0x306 : 0x307, 1);
+        SINGLE_DEV_READ(ctx, i, ctx->stack_dir == STACK_DIR_FWD ? 0x306 : 0x307, 1);
         if ((status = HAL_UART_Receive(ctx->hw.uart, buf, RX_FRAME_SIZE(1), STACK_RECV_TIMEOUT)) != 0)
         {
         }

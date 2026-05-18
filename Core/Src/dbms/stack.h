@@ -206,7 +206,7 @@ int StackWake(DbmsCtx* ctx);
  */
 void StackAutoAddr(DbmsCtx* ctx);
 void StackReverseAutoAddr(DbmsCtx* ctx);
-void StackReverseCommDir(DbmsCtx* ctx, bool reverse_direction);
+void StackReverseCommDir(DbmsCtx* ctx, StackDirection direction);
 void SendReverseAutoAddr(DbmsCtx* ctx);
 void SendSetStackTopManual(DbmsCtx* ctx, int devaddr);
 void StackReaddress(DbmsCtx* ctx);
