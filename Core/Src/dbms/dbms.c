@@ -136,7 +136,12 @@ int DbmsPerformWakeup(DbmsCtx* ctx)
     StackBalancingConfig(ctx);
 
     HAL_Delay(5);
+    ctx->stack_dir = STACK_DIR_FWD;
+    SendStackTopTrialNError(ctx);
+    HAL_Delay(5);
     StackReverseAutoAddr(ctx); // addresses stack in reverse direction and sets comm direction to reverse
+    HAL_Delay(5);
+    SendStackTopTrialNError(ctx);
     HAL_Delay(5);
     StackReverseCommDir(ctx, STACK_DIR_FWD); // switches back to forward direction
 
