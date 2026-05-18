@@ -399,7 +399,7 @@ void UpdateTemps(DbmsCtx* ctx, RxStackFrameTemps* frame)
     for (size_t j = 0; j < temps; j++)
     {
         uint16_t raw = (moved_data[j * sizeof(int16_t)] << 8) + moved_data[j * sizeof(int16_t) + 1];
-        ctx->cell_states[ADDR_BCAST_TO_STACK(frame->devaddr)].temps[N_TEMPS_POLL_PER_MONITOR*j + offset] =
+        ctx->cell_states[ADDR_BCAST_TO_STACK(ctx, frame->devaddr)].temps[N_TEMPS_POLL_PER_MONITOR*j + offset] =
             ThermVoltToTemp(ctx, MAX(0, raw * STACK_T_UV_PER_BIT / 1000000.0));
     }
 }
@@ -633,7 +633,7 @@ void StackSetDeviceBalanceTimers(DbmsCtx* ctx, uint8_t side, bool odds, StackBal
         uint16_t reg_addr = base_reg - i; // registers decrement
         uint8_t timer_val = i % 2 == odds && cells_to_bal[i] ? bal_time : 0x00;
 
-        SINGLE_DEV_WRITE(ctx, ADDR_STACK_TO_BCAST(side), reg_addr, DATA(timer_val));
+        SINGLE_DEV_WRITE(ctx, ADDR_STACK_TO_BCAST(ctx, side), reg_addr, DATA(timer_val));
         HAL_Delay(2);  // small delay between writes
     }
 }

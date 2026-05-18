@@ -197,17 +197,15 @@ int SendMetrics(DbmsCtx* ctx)
 
     SendMetric(ctx, 97, ctx->stats.n_can_bussoffs);
 
-<<<<<<< HEAD
-    SendMetric(ctx, 100, ctx->stack_dir);
-    SendMetric(ctx, 101, ctx->n_fwd_monitors);
-    SendMetric(ctx, 102, ctx->n_rev_monitors);
-    SendMetric(ctx, 103, ctx->stack_readdressed);
-=======
     for (int i = 0; i < N_SIDES; i++)
     {
         SendMetric(ctx, 98 + i, ctx->bad_therm_mask[i]);
     }
->>>>>>> master
+
+    SendMetric(ctx, 100, ctx->stack_dir);
+    SendMetric(ctx, 101, ctx->n_fwd_monitors);
+    SendMetric(ctx, 102, ctx->n_rev_monitors);
+    SendMetric(ctx, 103, ctx->stack_readdressed);
 
     return 0;
 }
