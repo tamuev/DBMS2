@@ -374,7 +374,7 @@ void StackUpdateAllTempReadings(DbmsCtx* ctx)
 
     StackRead(ctx, rx_buffer_t, STACK_T_REG_START, data_size, expected_rx_size);
 
-    for (size_t i = 0; i < N_MONITORS; i++)
+    for (size_t i = 0; i < active_monitors; i++)
     {
         IncStackCrcStats(ctx, true, i);
         // TODO: test without on new battery to see if this is necessary

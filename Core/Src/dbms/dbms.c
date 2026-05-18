@@ -138,7 +138,7 @@ int DbmsPerformWakeup(DbmsCtx* ctx)
     HAL_Delay(5);
     StackReverseAutoAddr(ctx); // addresses stack in reverse direction and sets comm direction to reverse
     HAL_Delay(5);
-    StackReverseCommDir(ctx, false); // switches to original direction
+    StackReverseCommDir(ctx, true); // switches back to forward direction
 
     ctx->current_sensor.q_offset = 0.0f;
     ctx->current_sensor.has_q_offset = false;
@@ -199,19 +199,9 @@ void DbmsHandleActive(DbmsCtx* ctx)
     HAL_Delay(5);
     // if (!ctx->stack_readdressed && ctx->stats.iters < 3) ; // For some reason needs to be run a few times on startup
     HAL_Delay(5);
-    if (!ctx->stack_dir && GetUs(ctx) - ctx->stack_dir_change_ts > GetSetting(ctx, STACK_REVERSAL_SWITCHING_MS))
+    if (ctx->stack_readdressed && GetUs(ctx) - ctx->stack_dir_change_ts > GetSetting(ctx, STACK_REVERSAL_SWITCHING_MS))
     {
-        //true = revserses direction
-        StackReverseCommDir(ctx, true);
-        if (ctx->flags.active)
-        {
-            MonitorLedBlink(ctx);
-        }
-    }
-    else if (ctx->stack_dir && GetUs(ctx) - ctx->stack_dir_change_ts > GetSetting(ctx, STACK_REVERSAL_SWITCHING_MS))
-    {
-        //false = sets direction back to original
-        StackReverseCommDir(ctx, false);
+        StackReverseCommDir(ctx, !ctx->stack_dir);
         if (ctx->flags.active)
         {
             MonitorLedBlink(ctx);

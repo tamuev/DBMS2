@@ -202,10 +202,10 @@ int SendMetrics(DbmsCtx* ctx)
         SendMetric(ctx, 98 + i, ctx->bad_therm_mask[i]);
     }
 
-    SendMetric(ctx, 100, ctx->stack_dir);
-    SendMetric(ctx, 101, ctx->n_fwd_monitors);
-    SendMetric(ctx, 102, ctx->n_rev_monitors);
-    SendMetric(ctx, 103, ctx->stack_readdressed);
+    SendMetric(ctx, 115, ctx->stack_dir);
+    SendMetric(ctx, 116, ctx->n_fwd_monitors);
+    SendMetric(ctx, 117, ctx->n_rev_monitors);
+    SendMetric(ctx, 118, ctx->stack_readdressed);
 
     return 0;
 }
