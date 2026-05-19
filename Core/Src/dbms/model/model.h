@@ -18,10 +18,11 @@
 #include "../storage.h"
 #include "../vinterface.h"
 
-#define Q_BOUND_L_OC    4.3696
-#define Q_BOUND_H_OC    4.3967
-#define Q_BOUND_L_RC    4.197
-#define Q_BOUND_H_RC    4.3914
+// 2026 cell (4.9 Ah) — flat bounds until temperature characterization is available
+#define Q_BOUND_L_OC    4.9
+#define Q_BOUND_H_OC    4.9
+#define Q_BOUND_L_RC    4.9
+#define Q_BOUND_H_RC    4.9
 #define MIN_OC_I        4.5     // 1 coulomb
 
 extern const float TEMPS[N_TEMPS];
