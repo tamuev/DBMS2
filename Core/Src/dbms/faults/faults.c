@@ -76,7 +76,7 @@ void CtrlSetFault(DbmsCtx* ctx, CtrlFault fault, uint8_t cell, uint16_t value)
     FaultData* data = &ctx->faults.fault_data[fault];
 
     bool save_value = false;
-    switch (fault_save_modes[fault]) 
+    switch (fault_save_modes[fault])
     {
         case CTRL_KEEP_FIRST:
             save_value = !CtrlHasStickyFault(ctx, fault);
@@ -132,7 +132,7 @@ bool CtrlHasAnyFaults(DbmsCtx* ctx)
  */
 bool CtrlHasAnyHardFaults(DbmsCtx* ctx)
 {
-    return ((ctx->faults.active_faults | ctx->faults.latched_faults) 
+    return ((ctx->faults.active_faults | ctx->faults.latched_faults)
         & (~ctx->faults.warnings_config | NONMASKABLE_FAULTS)) != 0;
 }
 
@@ -141,7 +141,7 @@ bool CtrlHasAnyHardFaults(DbmsCtx* ctx)
  */
 bool CtrlHasAnyWarnings(DbmsCtx* ctx)
 {
-    return ((ctx->faults.active_faults | ctx->faults.latched_faults) 
+    return ((ctx->faults.active_faults | ctx->faults.latched_faults)
         & (ctx->faults.warnings_config & ~NONMASKABLE_FAULTS)) != 0;
 }
 

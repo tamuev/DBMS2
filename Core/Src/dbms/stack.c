@@ -380,6 +380,8 @@ void StackCalcStats(DbmsCtx* ctx)
         {
             float v = ctx->cell_states[i].voltages[j];
 
+            if (ctx->stats.last_monitor_msg[i] != ctx->stats.iters) continue;
+
             if (v < v_min)
             {
                 v_min = v;
