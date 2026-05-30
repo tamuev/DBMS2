@@ -11,6 +11,14 @@
  */
 #include "vinterface.h"
 
+static uint16_t CellByteToPlexId(uint8_t cb)
+{
+    if (cb == CELL_BYTE_NA) return 0;
+    uint8_t side = (cb >> 4) & 0xF;
+    uint8_t cell = cb & 0xF;
+    return (side / 2 + 1) * 1000 + (side % 2 + 1) * 100 + (cell + 1);
+}
+
 /*****************************
  *      HEARTBEAT
  *****************************/
@@ -253,7 +261,7 @@ void SendPlex16x4(DbmsCtx* ctx, uint16_t id, uint16_t v1, uint16_t v2, uint16_t 
 
 void SendPlexMetrics(DbmsCtx* ctx)
 {
-    SendPlex32x2(ctx, 0x10, F2I_K(CLAMP(ctx->model.z_oc, 0.0, 1.0), 100000), 0);
+    SendPlex32x2(ctx, 0x10, F2I_K(CLAMP(ctx->model.z_oc, 0.0, 1.0), 100000), CellByteToPlexId(ctx->stats.max_t_cell));
 
     int32_t pack_v = ctx->stats.avg_v * (N_SIDES * N_GROUPS_PER_SIDE);
 
