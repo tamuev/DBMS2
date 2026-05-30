@@ -288,7 +288,8 @@ void DbmsIter(DbmsCtx* ctx)
         ctx->flags.need_to_reset_qstats = false;
     }
 
-    if (ctx->stats.iters % 400 == 0) {
+    if (ctx->stats.iters % 400 == 0) 
+    {
         PeriodicSaveQStats(ctx);
     }
 
@@ -383,6 +384,10 @@ void DbmsIter(DbmsCtx* ctx)
      * Transmit telemetry
      */
     SendPlexMetrics(ctx);
+    if (ctx->stats.iters % 20)  // ~every 1s
+    {
+        SendCellTemps(ctx);
+    }
     ctx->flags.telem_enable = HAL_GetTick() - ctx->timing.last_rx_telembeat < 5000; // < GetSetting(ctx, QUIET_MS_BEFORE_SHUTDOWN))
     if (ctx->flags.telem_enable)
     {
