@@ -359,7 +359,7 @@ int SendCellTemps(DbmsCtx* ctx)
     {
         for (size_t j = 0; j < N_GROUPS_PER_SIDE; j++)
         {
-            buffer[j] = CLAMP_U16((long)lroundf(ctx->cell_states[i].temps[j] * 1000.0f));
+            buffer[j] = CLAMP_U16((long)lroundf(ctx->cell_states[i].temps[j] * 100.0f));
         }
         SendCellDataBuffer(ctx, CANID_CELLSTATE_TEMPS, i, buffer, ARRAY_LEN(buffer));
     }
