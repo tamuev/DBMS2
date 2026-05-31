@@ -54,8 +54,8 @@ enum _UserSettingIndex
     CH_AC_VOLTAGE,
     CH_ELCON_EFF,
 
-    FAN_T_TH,
-    FAN_DUTY,
+    FAN_ON_TEMP,
+    FAN_OFF_TEMP,
 
     LOW_PLAUSIBLE_TEMP,
     HIGH_PLAUSIBLE_TEMP,

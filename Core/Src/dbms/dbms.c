@@ -239,7 +239,10 @@ void DbmsIter(DbmsCtx* ctx)
 
     if (ctx->flags.need_to_save_bad_therms)
     {
-        WriteEEPROM(ctx, EEPROM_BAD_THERM_MASK_ADDR, (uint8_t*)ctx->bad_therm_mask, sizeof(ctx->bad_therm_mask));
+        if (SaveStoredObject(ctx, EEPROM_BAD_THERM_MASK_ADDR, (uint8_t*) ctx->bad_therm_mask, sizeof(ctx->bad_therm_mask)) != 0)
+        {
+            CAN_REPORT_FAULT(ctx, status);
+        }
         ctx->flags.need_to_save_bad_therms = false;
     }
 
@@ -288,7 +291,7 @@ void DbmsIter(DbmsCtx* ctx)
         ctx->flags.need_to_reset_qstats = false;
     }
 
-    if (ctx->stats.iters % 400 == 0) 
+    if (ctx->stats.iters % 400 == 0)
     {
         PeriodicSaveQStats(ctx);
     }
@@ -387,6 +390,7 @@ void DbmsIter(DbmsCtx* ctx)
     if (ctx->stats.iters % 20)  // ~every 1s
     {
         SendCellTemps(ctx);
+        // here transmit values of settings in can frame
     }
     ctx->flags.telem_enable = HAL_GetTick() - ctx->timing.last_rx_telembeat < 5000; // < GetSetting(ctx, QUIET_MS_BEFORE_SHUTDOWN))
     if (ctx->flags.telem_enable)
@@ -411,6 +415,16 @@ void DbmsIter(DbmsCtx* ctx)
     #ifdef HAS_FAN
     UpdateFan(ctx);
     #endif
+
+    if (ctx->stats.max_t > GetSetting(ctx, FAN_ON_TEMP))
+    {
+        ctx->flags.fan_on = true;
+    }
+    else if (ctx->stats.max_t < GetSetting(ctx, FAN_OFF_TEMP))
+    {
+        ctx->flags.fan_on = false;
+    }
+
     ProcessLedAction(ctx);
 
     if (ctx->flags.active) {

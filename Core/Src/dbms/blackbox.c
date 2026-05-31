@@ -14,7 +14,7 @@
 #include "storage.h"
 #include "can.h"
 
-#define BLACKBOX_QUEUE_SIZE 10
+#define BLACKBOX_QUEUE_SIZE EEPROM_BLACKBOX_N_SLOTS
 
 static Snapshot snapshot_queue[BLACKBOX_QUEUE_SIZE];
 
@@ -84,7 +84,7 @@ int SendSnapshot(DbmsCtx* ctx, uint8_t idx)
     int status;
     Snapshot temp_snapshot;
 
-    uint32_t snapshot_addr = EEPROM_BLACKBOX_BASE_ADDR + idx * 100;
+    uint32_t snapshot_addr = EEPROM_BLACKBOX_BASE_ADDR + idx * EEPROM_BLACKBOX_SLOT_SIZE;
 
     if ((status = LoadStoredObject(ctx, snapshot_addr, &temp_snapshot, sizeof(Snapshot))) != HAL_OK)
     {
@@ -130,22 +130,6 @@ int BlackboxSend(DbmsCtx* ctx)
         uint8_t count;
     } blackbox_meta;
 
-
-    if ((status = LoadStoredObject(ctx, EEPROM_BLACKBOX_META_ADDR, &blackbox_meta, sizeof(blackbox_meta))) != HAL_OK)
-    {
-        return status;
-    }
-
-    // Send all snapshots in chronological order
-    for (uint8_t i = 0; i < blackbox_meta.count; ++i)
-    {
-        if ((status = SendSnapshot(ctx, i)) != HAL_OK)
-        {
-            return status;
-        }
-    }
-
-    // send snapshot size so the app can reconstruct frames
     uint16_t snapshot_size = sizeof(Snapshot);
     uint8_t size_frame[8] = {
         snapshot_size & 0xFF,
@@ -153,7 +137,21 @@ int BlackboxSend(DbmsCtx* ctx)
         0, 0, 0, 0, 0, 0
     };
     CanTransmit(ctx, CANID_TX_BLACKBOX_SIZE, size_frame);
+    HAL_Delay(10); // let the size frame land before the snapshot frames stream
 
+    if ((status = LoadStoredObject(ctx, EEPROM_BLACKBOX_META_ADDR, &blackbox_meta, sizeof(blackbox_meta))) != HAL_OK)
+    {
+        return status;
+    }
+
+    for (uint8_t i = 0; i < blackbox_meta.count; ++i)
+    {
+        int snap_status = SendSnapshot(ctx, i);
+        if (snap_status != HAL_OK)
+        {
+            status = snap_status;
+        }
+    }
 
     return status;
 }
@@ -167,7 +165,7 @@ int BlackboxSaveOnFault(DbmsCtx* ctx)
         // index in q
         uint8_t idx = (ctx->blackbox.head + 1 + i) % BLACKBOX_QUEUE_SIZE;
 
-        uint32_t addr = EEPROM_BLACKBOX_BASE_ADDR + i * 100;
+        uint32_t addr = EEPROM_BLACKBOX_BASE_ADDR + i * EEPROM_BLACKBOX_SLOT_SIZE;
 
         if ((status = SaveStoredObject(ctx, addr, &snapshot_queue[idx], sizeof(Snapshot))) != HAL_OK)
         {

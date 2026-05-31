@@ -296,6 +296,7 @@ typedef struct _Flags {
     bool shutdown_requested;
     bool shutdown_stack_requested;
     bool need_to_save_bad_therms;
+    bool fan_on;
 } Flags;
 
 typedef struct _ChargeStats {

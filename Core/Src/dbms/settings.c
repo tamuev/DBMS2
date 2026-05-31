@@ -1,9 +1,9 @@
-/** 
- * 
+/**
+ *
  * Distributed BMS      Configuration/Setting System
  *
  * Copyright (C) 2025   Texas A&M University
- * 
+ *
  *                      Justus Languell  <justus@tamu.edu>
  *                      Cam Stone        <cameron28202@tamu.edu>
  *                      Abhinav Akavaram <abhinav.akavaram@tamu.edu>
@@ -71,15 +71,15 @@ void LoadFallbackSettings(DbmsCtx* ctx)
     ctx->settings->user_defined[CH_AC_VOLTAGE] = 240;
     ctx->settings->user_defined[CH_ELCON_EFF] = 90;
 
-    ctx->settings->user_defined[FAN_T_TH] = 30; // todo: ?
-    ctx->settings->user_defined[FAN_DUTY] = 100;
+    ctx->settings->user_defined[FAN_ON_TEMP] = 30; // todo: ?
+    ctx->settings->user_defined[FAN_OFF_TEMP] = 100;
 
     ctx->settings->user_defined[LOW_PLAUSIBLE_TEMP] = 10;
     ctx->settings->user_defined[HIGH_PLAUSIBLE_TEMP] = 120;
-  
+
     ctx->settings->user_defined[PRECHARGE_ON_TH] = 90;
     ctx->settings->user_defined[PRECHARGE_OFF_TH] = 10;
-    
+
     ctx->settings->user_defined[QUITE_STACK_FAULT_TICKS] = 20;
     ctx->settings->user_defined[MS_BEFORE_CAN_FAIL] = 1000000;
 

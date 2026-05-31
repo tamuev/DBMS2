@@ -1,9 +1,9 @@
-/** 
- * 
+/**
+ *
  * Distributed BMS      Fan Controller
  *
  * Copyright (C) 2025   Texas A&M University
- * 
+ *
  *                      Justus Languell  <justus@tamu.edu>
  *                      Cam Stone        <cameron28202@tamu.edu>
  *                      Abhinav Akavaram <abhinav.akavaram@tamu.edu>
@@ -21,7 +21,7 @@ int UpdateFan(DbmsCtx* ctx)
 {
     int duty = 0;
 
-    if (ctx->stats.avg_t > GetSetting(ctx, FAN_T_TH))
+    if (ctx->stats.avg_t > GetSetting(ctx, FAN_ON_TEMP))
     {
         // duty = GetSetting(ctx, FAN_DUTY);
         duty = 100;
