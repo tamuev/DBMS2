@@ -1,9 +1,9 @@
-/** 
- * 
+/**
+ *
  * Distributed BMS      Equivilant Circuit Model
  *
  * Copyright (C) 2025   Texas A&M University
- * 
+ *
  *                      Justus Languell  <justus@tamu.edu>
  *                      Cam Stone        <cameron28202@tamu.edu>
  *                      Abhinav Akavaram <abhinav.akavaram@tamu.edu>
@@ -113,7 +113,7 @@ float F_DCIR(float V_oc, float V_pack, float I)
     return (V_oc - V_pack) / I;
 }
 
-// 
+//
 //  Calc I Limit
 //
 float F_I_Limit(float V_min, float V_dyn_min, float R_cell)
@@ -125,7 +125,7 @@ float F_I_Limit(float V_min, float V_dyn_min, float R_cell)
 void ComputeModel(Model* m, float T_bar, float I, float Q0, float Qd, float V_pack, float V_dyn_min, float V_min)
 {
     m->Q = F_Q(Q0, Qd);
-    
+
     // OC Path
     float Q_max_oc = F_Q_max(T_bar, Q_BOUND_H_OC, Q_BOUND_L_OC);
     m->z_oc = F_Z(m->Q, Q_max_oc);
@@ -135,7 +135,7 @@ void ComputeModel(Model* m, float T_bar, float I, float Q0, float Qd, float V_pa
         m->R_oc = F_DCIR(m->V_oc, V_pack, I);
     }
     else m->R_oc = 0;
-    
+
     // RC/ECM Path (single DCIR lookup)
     float Q_max_rc = F_Q_max(T_bar, Q_BOUND_H_RC, Q_BOUND_L_RC);
     m->z_rc = F_Z(m->Q, Q_max_rc);
@@ -151,7 +151,7 @@ void ComputeModel(Model* m, float T_bar, float I, float Q0, float Qd, float V_pa
 
 void UpdateModel(DbmsCtx* ctx)
 {
-  
+
 
     float v_pack = (ctx->current_sensor.voltage1_mv / 1e3f) / (N_SIDES * N_GROUPS_PER_SIDE);
     float current = (ctx->current_sensor.current_ma / 1000.0) / N_P_GROUP;
@@ -162,7 +162,7 @@ void UpdateModel(DbmsCtx* ctx)
     // CanLog("DY %d\n", GetSetting(ctx, DYNAMIC_V_MIN));
     float V_dyn_min = GetSetting(ctx, DYNAMIC_V_MIN) / 1000.0f;
     // ^ this should probably be asserted as positive
-    //temp 
+    //temp
     // ctx->qstats.accumulated_loss = 0;S
     // ctx->qstats.initial = 3.9;
 
@@ -197,9 +197,9 @@ int SaveQStats(DbmsCtx* ctx)
 
 int PeriodicSaveQStats(DbmsCtx* ctx) {
     CanLog(ctx, "psave\n");
-    CanLog(ctx, "hist0: %d hist: %d acc: %d\n", 
-        (int) (ctx->initial_historic_accumulated_loss * 1000), 
-        (int) (ctx->qstats.historic_accumulated_loss * 1000), 
+    CanLog(ctx, "hist0: %d hist: %d acc: %d\n",
+        (int) (ctx->initial_historic_accumulated_loss * 1000),
+        (int) (ctx->qstats.historic_accumulated_loss * 1000),
         (int) (ctx->qstats.accumulated_loss * 1000));
     if (ctx->initial_historic_accumulated_loss + ctx->qstats.accumulated_loss - ctx->qstats.historic_accumulated_loss > 0.1) {
         return SaveQStats(ctx);

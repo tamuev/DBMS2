@@ -181,6 +181,8 @@ int SendMetrics(DbmsCtx* ctx)
         SendMetric(ctx, 71, (ctx->stats.n_rx_stack_bad_crcs_itvl * 100) / ctx->stats.n_rx_stack_frames_itvl);
     SendMetric(ctx, 72, ctx->stats.n_int_shutdowns);
 
+    SendMetric(ctx, 108, ctx->stats.distance);
+
     for (int i = 0; i < N_MONITORS; i++)
     {
         SendMetric(ctx, 80 + i, ctx->stats.monitor_bad_crcs[i]);

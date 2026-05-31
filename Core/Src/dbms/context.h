@@ -161,6 +161,8 @@ typedef struct _Stats
     uint16_t n_can_bussoffs;
 
     uint64_t last_monitor_msg[N_MONITORS]; // Last iter that a message was received from each monitor
+
+    uint32_t distance;
 } Stats;
 
 typedef struct _Model   // Outputs from the ECM model

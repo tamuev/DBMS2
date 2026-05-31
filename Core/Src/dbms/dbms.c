@@ -94,6 +94,14 @@ void DbmsInit(DbmsCtx* ctx)
     ctx->initial_historic_accumulated_loss = ctx->qstats.historic_accumulated_loss;
     ctx->flags.need_to_reset_qstats = false;
 
+    //
+    //  Load the accumulated distance (defaults to 0 on fresh/corrupt EEPROM)
+    //
+    if ((status = LoadStoredObject(ctx, EEPROM_DISTANCE, &ctx->stats.distance, sizeof(ctx->stats.distance))) != 0)
+    {
+        ctx->stats.distance = 0;
+    }
+
     ctx->timing.last_rx_heartbeat = -GetSetting(ctx, QUIET_MS_BEFORE_SHUTDOWN);
 
     ReadEEPROM(ctx, EEPROM_DEBUG, &ctx->stats.n_int_shutdowns, 1);
@@ -294,6 +302,7 @@ void DbmsIter(DbmsCtx* ctx)
     if (ctx->stats.iters % 400 == 0)
     {
         PeriodicSaveQStats(ctx);
+        SaveStoredObject(ctx, EEPROM_DISTANCE, &ctx->stats.distance, sizeof(ctx->stats.distance));
     }
 
     // Let everybody know that we are alive
@@ -569,6 +578,14 @@ void DbmsCanRx(DbmsCtx* ctx, CanRxChannel channel, CAN_RxHeaderTypeDef rx_header
         ctx->flags.need_to_save_bad_therms = true;
         break;
 
+    case CANID_RX_PLEX_DIST:
+        ctx->stats.distance += be32_to_u32(rx_data);
+        break;
+
+    case CANID_RX_SET_DISTANCE:
+        ctx->stats.distance = be32_to_u32(rx_data);
+        SaveStoredObject(ctx, EEPROM_DISTANCE, &ctx->stats.distance, sizeof(ctx->stats.distance));
+        break;
 // TODO: remove this
 #ifdef DEBUG_DO_OVERWRITE_TEMPS_OVER_CAN
     case CANID_DEBUG_OVERWRITE_TEMPS:
