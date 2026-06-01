@@ -162,9 +162,10 @@ typedef struct _Stats
 
     uint64_t last_monitor_msg[N_MONITORS]; // Last iter that a message was received from each monitor
 
-    uint32_t distance;       // Current lifetime total = distance_base + plex_session
-    uint32_t distance_base;    // D0: lifetime total at the start of this power cycle
-    uint32_t plex_session;     // Most recent session distance received from the plex (0x624)
+    uint32_t distance;          // Current lifetime total = distance_base + plex_session (milli-miles)
+    uint32_t distance_base;     // D0: lifetime total at the start of this power cycle (milli-miles)
+    uint32_t plex_session;      // Most recent session distance from the plex (0x625), converted to milli-miles
+    uint32_t last_saved_distance; // Last value persisted to EEPROM
 } Stats;
 
 typedef struct _Model   // Outputs from the ECM model
@@ -300,6 +301,7 @@ typedef struct _Flags {
     bool shutdown_requested;
     bool shutdown_stack_requested;
     bool need_to_save_bad_therms;
+    bool need_to_save_distance;
     bool fan_on;
 } Flags;
 

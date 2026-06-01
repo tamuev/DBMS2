@@ -105,6 +105,7 @@ void DbmsInit(DbmsCtx* ctx)
     }
     ctx->stats.plex_session = 0;
     ctx->stats.distance = ctx->stats.distance_base;
+    ctx->stats.last_saved_distance = ctx->stats.distance;
 
     ctx->timing.last_rx_heartbeat = -GetSetting(ctx, QUIET_MS_BEFORE_SHUTDOWN);
 
@@ -258,6 +259,19 @@ void DbmsIter(DbmsCtx* ctx)
         ctx->flags.need_to_save_bad_therms = false;
     }
 
+    //
+    //  Persist distance when the app forced an override
+    //
+    if (ctx->flags.need_to_save_distance)
+    {
+        if (SaveStoredObject(ctx, EEPROM_DISTANCE, &ctx->stats.distance, sizeof(ctx->stats.distance)) != 0)
+        {
+            CAN_REPORT_FAULT(ctx, status);
+        }
+        ctx->stats.last_saved_distance = ctx->stats.distance;
+        ctx->flags.need_to_save_distance = false;
+    }
+
     /**
      * Handle blackbox data requested
      */
@@ -307,7 +321,11 @@ void DbmsIter(DbmsCtx* ctx)
     {
         // save q stats and distance
         PeriodicSaveQStats(ctx);
-        SaveStoredObject(ctx, EEPROM_DISTANCE, &ctx->stats.distance, sizeof(ctx->stats.distance));
+        if (ctx->stats.distance != ctx->stats.last_saved_distance)
+        {
+            SaveStoredObject(ctx, EEPROM_DISTANCE, &ctx->stats.distance, sizeof(ctx->stats.distance));
+            ctx->stats.last_saved_distance = ctx->stats.distance;
+        }
     }
 
     // Let everybody know that we are alive
@@ -603,7 +621,7 @@ void DbmsCanRx(DbmsCtx* ctx, CanRxChannel channel, CAN_RxHeaderTypeDef rx_header
     case CANID_RX_SET_DISTANCE:
         ctx->stats.distance = be32_to_u32(rx_data);
         ctx->stats.distance_base = ctx->stats.distance - ctx->stats.plex_session;
-        SaveStoredObject(ctx, EEPROM_DISTANCE, &ctx->stats.distance, sizeof(ctx->stats.distance));
+        ctx->flags.need_to_save_distance = true;
         break;
 // TODO: remove this
 #ifdef DEBUG_DO_OVERWRITE_TEMPS_OVER_CAN
