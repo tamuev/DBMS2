@@ -612,8 +612,8 @@ void DbmsCanRx(DbmsCtx* ctx, CanRxChannel channel, CAN_RxHeaderTypeDef rx_header
 
     case CANID_RX_PLEX_DIST:
     {
-        uint32_t plex_km = be32_to_u32(rx_data);
-        ctx->stats.plex_session = (uint32_t)(((uint64_t)plex_km * 621371) / 1000); // convert km to mi
+        uint32_t plex_cm = be32_to_u32(rx_data);
+        ctx->stats.plex_session = (uint32_t)(((uint64_t)plex_cm * 625) / 100584); // plex sends meters with 2 decimal places, e.g. 100.00
         ctx->stats.distance = ctx->stats.distance_base + ctx->stats.plex_session;
         break;
     }
