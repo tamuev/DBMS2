@@ -95,12 +95,16 @@ void DbmsInit(DbmsCtx* ctx)
     ctx->flags.need_to_reset_qstats = false;
 
     //
-    //  Load the accumulated distance (defaults to 0 on fresh/corrupt EEPROM)
+    //  Load the persisted lifetime distance into the baseline (D0). The plex resets its
+    //  session count to 0 each power cycle, so this session's total = distance_base + plex_session.
+    //  Defaults to 0 on fresh/corrupt EEPROM.
     //
-    if ((status = LoadStoredObject(ctx, EEPROM_DISTANCE, &ctx->stats.distance, sizeof(ctx->stats.distance))) != 0)
+    if ((status = LoadStoredObject(ctx, EEPROM_DISTANCE, &ctx->stats.distance_base, sizeof(ctx->stats.distance_base))) != 0)
     {
-        ctx->stats.distance = 0;
+        ctx->stats.distance_base = 0;
     }
+    ctx->stats.plex_session = 0;
+    ctx->stats.distance = ctx->stats.distance_base;
 
     ctx->timing.last_rx_heartbeat = -GetSetting(ctx, QUIET_MS_BEFORE_SHUTDOWN);
 
@@ -301,6 +305,7 @@ void DbmsIter(DbmsCtx* ctx)
 
     if (ctx->stats.iters % 400 == 0)
     {
+        // save q stats and distance
         PeriodicSaveQStats(ctx);
         SaveStoredObject(ctx, EEPROM_DISTANCE, &ctx->stats.distance, sizeof(ctx->stats.distance));
     }
@@ -399,7 +404,16 @@ void DbmsIter(DbmsCtx* ctx)
     if (ctx->stats.iters % 20)  // ~every 1s
     {
         SendCellTemps(ctx);
-        // here transmit values of settings in can frame
+    }
+
+    if (ctx->stats.iters % 20 == 0)  // ~every 1s
+    {
+        uint8_t dist_buf[8] = {0};
+        dist_buf[0] = (uint8_t)(ctx->stats.distance >> 24);
+        dist_buf[1] = (uint8_t)(ctx->stats.distance >> 16);
+        dist_buf[2] = (uint8_t)(ctx->stats.distance >> 8);
+        dist_buf[3] = (uint8_t)(ctx->stats.distance);
+        CanTransmit(ctx, CANID_TX_DISTANCE, dist_buf);
     }
     ctx->flags.telem_enable = HAL_GetTick() - ctx->timing.last_rx_telembeat < 5000; // < GetSetting(ctx, QUIET_MS_BEFORE_SHUTDOWN))
     if (ctx->flags.telem_enable)
@@ -579,11 +593,16 @@ void DbmsCanRx(DbmsCtx* ctx, CanRxChannel channel, CAN_RxHeaderTypeDef rx_header
         break;
 
     case CANID_RX_PLEX_DIST:
-        ctx->stats.distance += be32_to_u32(rx_data);
+    {
+        uint32_t plex_km = be32_to_u32(rx_data);
+        ctx->stats.plex_session = (uint32_t)(((uint64_t)plex_km * 621371) / 1000); // convert km to mi
+        ctx->stats.distance = ctx->stats.distance_base + ctx->stats.plex_session;
         break;
+    }
 
     case CANID_RX_SET_DISTANCE:
         ctx->stats.distance = be32_to_u32(rx_data);
+        ctx->stats.distance_base = ctx->stats.distance - ctx->stats.plex_session;
         SaveStoredObject(ctx, EEPROM_DISTANCE, &ctx->stats.distance, sizeof(ctx->stats.distance));
         break;
 // TODO: remove this

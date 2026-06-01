@@ -148,7 +148,7 @@ int ConfigCan(DbmsCtx* ctx)
     {
         { 0x0B0, 0x7F0, false },
         { 0x500, 0x700, false },
-        { 0x624, 0x7FE, false }, // Plex distance (0x624) + set distance (0x625)
+        { 0x625, 0x7FD, false }, // Plex distance (0x625) + set distance (0x627); mask ignores bit1
         { 0x0B000000, 0x1FFF0000, true}
     };
 

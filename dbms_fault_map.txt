@@ -1,0 +1,39 @@
+DBMS Fault Decimal Map
+======================
+
+The fault value reported on telemetry is a 32-bit BITMASK, not an index.
+Each active fault sets one bit. The decimal you see is the sum of the bit
+values of every fault that is currently active. Decode by breaking the
+number into powers of two.
+
+Bit  Decimal  Fault                          Meaning
+0    1        CTRL_FAULT_VOLTAGE_OVER        Cell overvoltage
+1    2        CTRL_FAULT_VOLTAGE_UNDER       Cell undervoltage
+2    4        CTRL_FAULT_TEMP_OVER           Over temperature
+3    8        CTRL_FAULT_TEMP_UNDER          Under temperature
+4    16       CTRL_FAULT_CURRENT_OVER        Over current
+5    32       CTRL_FAULT_CURRENT_UNDER       Under current
+6    64       CTRL_FAULT_PACK_VOLTAGE_OVER   Pack overvoltage
+7    128      CTRL_FAULT_PACK_VOLTAGE_UNDER  Pack undervoltage
+8    256      CTRL_FAULT_MAX_DELTA_EXCEEDED  Max cell delta exceeded
+9    512      CTRL_FAULT_STACK_FAULT         Stack/monitor (BQ79616) fault
+10   1024     CTRL_FAULT_CURRENT_PULSE       Current pulse
+11   2048     CTRL_FAULT_CAN_FAIL            CAN failure
+12   4096     CTRL_FAULT_STACK_DISCONNECT    Stack/monitor disconnect
+
+Decoding examples
+-----------------
+0    -> no active faults
+4    -> Temp over
+6    -> Voltage under + Temp over (2 + 4)
+513  -> Voltage over + Stack fault (1 + 512)
+
+Notes
+-----
+- Non-maskable (always hard) faults = bits 0,1,2,4,6,7,8 = decimal 471
+  (1 + 2 + 4 + 16 + 64 + 128 + 256). These cannot be downgraded to warnings.
+- The same bit positions are reused for the warnings_config and
+  nonlatching_config masks, so those values decode with this same table.
+- CtrlCANFaults (TX_FAILS=0, ISENSE_DC=1, BUSOFF=2) is a separate, smaller
+  enum used only inside CAN-fault detail reporting. Do not confuse it with
+  the main fault mask above.
