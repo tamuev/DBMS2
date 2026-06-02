@@ -10,6 +10,9 @@ DBMS is the in-house battery management system for the Texas A&M University Form
 
 | Date | Version | Changelog | Testing |
 | --- | --- | --- | --- |
+| May 2026 | v4.2 | Publish all thermistor data AME26 | 5/30/2026 |
+| May 2026 | v4.1 | Stable release for AME26 | 5/24/2026 |
+| Apr 2026 | v4.0 | Initial support for AME26 | 4/01/2026 |
 | Jan 2026 | v3.1 | Charging improvements, auto-shutdown, etc. | 1/30/2026 |
 | Jan 2026 | v3.0 | Prototype charging support for AME25 | n/a |
 | Nov 2025 | v2.1 | Improvements to discharge path on AME 25 | 11/22/2025 |
