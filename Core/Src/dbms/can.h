@@ -69,6 +69,10 @@
 
 #define CANID_RX_SET_BAD_THERM      0x0B0
 
+#define CANID_RX_PLEX_DIST          0x625
+#define CANID_TX_DISTANCE           0x626
+#define CANID_RX_SET_DISTANCE       0x627
+
 /* Extended IDs */
 
 #define CANID_CELLSTATE_VOLTS       0x0B002000

@@ -94,6 +94,19 @@ void DbmsInit(DbmsCtx* ctx)
     ctx->initial_historic_accumulated_loss = ctx->qstats.historic_accumulated_loss;
     ctx->flags.need_to_reset_qstats = false;
 
+    //
+    //  Load the persisted lifetime distance into the baseline (D0). The plex resets its
+    //  session count to 0 each power cycle, so this session's total = distance_base + plex_session.
+    //  Defaults to 0 on fresh/corrupt EEPROM.
+    //
+    if ((status = LoadStoredObject(ctx, EEPROM_DISTANCE, &ctx->stats.distance_base, sizeof(ctx->stats.distance_base))) != 0)
+    {
+        ctx->stats.distance_base = 0;
+    }
+    ctx->stats.plex_session = 0;
+    ctx->stats.distance = ctx->stats.distance_base;
+    ctx->stats.last_saved_distance = ctx->stats.distance;
+
     ctx->timing.last_rx_heartbeat = -GetSetting(ctx, QUIET_MS_BEFORE_SHUTDOWN);
 
     ReadEEPROM(ctx, EEPROM_DEBUG, &ctx->stats.n_int_shutdowns, 1);
@@ -246,6 +259,19 @@ void DbmsIter(DbmsCtx* ctx)
         ctx->flags.need_to_save_bad_therms = false;
     }
 
+    //
+    //  Persist distance when the app forced an override
+    //
+    if (ctx->flags.need_to_save_distance)
+    {
+        if (SaveStoredObject(ctx, EEPROM_DISTANCE, &ctx->stats.distance, sizeof(ctx->stats.distance)) != 0)
+        {
+            CAN_REPORT_FAULT(ctx, status);
+        }
+        ctx->stats.last_saved_distance = ctx->stats.distance;
+        ctx->flags.need_to_save_distance = false;
+    }
+
     /**
      * Handle blackbox data requested
      */
@@ -293,7 +319,13 @@ void DbmsIter(DbmsCtx* ctx)
 
     if (ctx->stats.iters % 400 == 0)
     {
+        // save q stats and distance
         PeriodicSaveQStats(ctx);
+        if (ctx->stats.distance != ctx->stats.last_saved_distance)
+        {
+            SaveStoredObject(ctx, EEPROM_DISTANCE, &ctx->stats.distance, sizeof(ctx->stats.distance));
+            ctx->stats.last_saved_distance = ctx->stats.distance;
+        }
     }
 
     // Let everybody know that we are alive
@@ -390,7 +422,16 @@ void DbmsIter(DbmsCtx* ctx)
     if (ctx->stats.iters % 20)  // ~every 1s
     {
         SendCellTemps(ctx);
-        // here transmit values of settings in can frame
+    }
+
+    if (ctx->stats.iters % 20 == 0)  // ~every 1s
+    {
+        uint8_t dist_buf[8] = {0};
+        dist_buf[0] = (uint8_t)(ctx->stats.distance >> 24);
+        dist_buf[1] = (uint8_t)(ctx->stats.distance >> 16);
+        dist_buf[2] = (uint8_t)(ctx->stats.distance >> 8);
+        dist_buf[3] = (uint8_t)(ctx->stats.distance);
+        CanTransmit(ctx, CANID_TX_DISTANCE, dist_buf);
     }
     ctx->flags.telem_enable = HAL_GetTick() - ctx->timing.last_rx_telembeat < 5000; // < GetSetting(ctx, QUIET_MS_BEFORE_SHUTDOWN))
     if (ctx->flags.telem_enable)
@@ -569,6 +610,19 @@ void DbmsCanRx(DbmsCtx* ctx, CanRxChannel channel, CAN_RxHeaderTypeDef rx_header
         ctx->flags.need_to_save_bad_therms = true;
         break;
 
+    case CANID_RX_PLEX_DIST:
+    {
+        uint32_t plex_cm = be32_to_u32(rx_data);
+        ctx->stats.plex_session = (uint32_t)(((uint64_t)plex_cm * 625) / 100584); // plex sends meters with 2 decimal places, e.g. 100.00
+        ctx->stats.distance = ctx->stats.distance_base + ctx->stats.plex_session;
+        break;
+    }
+
+    case CANID_RX_SET_DISTANCE:
+        ctx->stats.distance = be32_to_u32(rx_data);
+        ctx->stats.distance_base = ctx->stats.distance - ctx->stats.plex_session;
+        ctx->flags.need_to_save_distance = true;
+        break;
 // TODO: remove this
 #ifdef DEBUG_DO_OVERWRITE_TEMPS_OVER_CAN
     case CANID_DEBUG_OVERWRITE_TEMPS:
