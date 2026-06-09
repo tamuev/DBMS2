@@ -303,6 +303,7 @@ typedef struct _Flags {
     bool need_to_save_bad_therms;
     bool need_to_save_distance;
     bool fan_on;
+    bool req_reboot;
 } Flags;
 
 typedef struct _ChargeStats {
