@@ -16,6 +16,7 @@ Bootloader protocol:
     -> RX_DATA|seq     [<=8 image bytes]        write at offset + seq*8
     -> RX_BLOCK_FINISH []                       TX_BLOCK_FINISH_ACK [u32 BE bytes]
     -> RX_VERIFY       []                       TX_VERIFY_RESP [u32 BE crc32]
+    -> RX_BOOT         []                       (no ack; target runs the app)
 
 The target only listens for RX_START for BOOT_WAIT_MS (~250 ms) after reset, so
 this script repeatedly sends RX_START until it sees an ack. To get the target
@@ -33,20 +34,63 @@ import time
 import zlib
 
 # --- Protocol IDs (must match App/canbl.h) ---------------------------------
-CANID_RX_START            = 0x0C000002
-CANID_TX_START_ACK        = 0x0C000003
-CANID_RX_BLOCK_START      = 0x0C000004
-CANID_TX_BLOCK_START_ACK  = 0x0C000005
-CANID_RX_BLOCK_FINISH     = 0x0C000006
-CANID_TX_BLOCK_FINISH_ACK = 0x0C000007
-CANID_RX_VERIFY           = 0x0C000008
-CANID_TX_VERIFY_RESP      = 0x0C000009
-CANID_RX_BOOT             = 0x0C00000A
+# Every bootloader frame is 0x0C00 <device> <msg> <seq>:
+#     id = 0x0C000000 | (device << 12) | (msg << 8) | seq
+# The device nibble selects which board on the bus we are addressing, so all
+# IDs below are derived from the --device chosen at runtime.
+CANBL_BASE = 0x0C000000
 
-CANID_RX_DATA             = 0x0C000D00
+# Message-type nibbles (bits 8-11).
+MSG_ANNOUNCE         = 0x0
+MSG_START            = 0x1
+MSG_START_ACK        = 0x2
+MSG_BLOCK_START      = 0x3
+MSG_BLOCK_START_ACK  = 0x4
+MSG_BLOCK_FINISH     = 0x5
+MSG_BLOCK_FINISH_ACK = 0x6
+MSG_VERIFY           = 0x7
+MSG_VERIFY_RESP      = 0x8
+MSG_BOOT             = 0x9
+MSG_DATA             = 0xF
+
+# Known device IDs (see CANBL_DEV_* in App/canbl.h).
+DEVICES = {
+    "dbms":     1,
+    "fl_node":  2,
+    "fr_node":  3,
+    "bl_node":  4,
+    "br_node":  5,
+    "lvswp":    6,
+    "dcu":      7,
+    "roadlink": 8,
+}
+
+
+def canid(device, msg):
+    """CAN ID for a message type on a given device (seq nibble = 0)."""
+    return CANBL_BASE | (device << 12) | (msg << 8)
+
+
+class Ids:
+    """All bootloader CAN IDs for one target device."""
+
+    def __init__(self, device):
+        self.device                  = device
+        self.RX_START                = canid(device, MSG_START)
+        self.TX_START_ACK            = canid(device, MSG_START_ACK)
+        self.RX_BLOCK_START          = canid(device, MSG_BLOCK_START)
+        self.TX_BLOCK_START_ACK      = canid(device, MSG_BLOCK_START_ACK)
+        self.RX_BLOCK_FINISH         = canid(device, MSG_BLOCK_FINISH)
+        self.TX_BLOCK_FINISH_ACK     = canid(device, MSG_BLOCK_FINISH_ACK)
+        self.RX_VERIFY               = canid(device, MSG_VERIFY)
+        self.TX_VERIFY_RESP          = canid(device, MSG_VERIFY_RESP)
+        self.RX_BOOT                 = canid(device, MSG_BOOT)
+        self.RX_DATA                 = canid(device, MSG_DATA)
+
 
 # Blank frame here asks the running application to reboot into the bootloader,
-# setting the flash-request flag so the bootloader stays in flash mode.
+# setting the flash-request flag so the bootloader stays in flash mode. This is
+# an application-level magic frame, independent of the CANBL device scheme.
 CANID_REBOOT              = 0x0B00B007
 
 BLOCK_SIZE = 2048   # max bytes per block: 256 data frames * 8 bytes
@@ -126,7 +170,7 @@ class CanTcp:
                 print(f"[..] ignoring unexpected id={can_id:08X}")
 
 
-def upload(can, image, start_timeout, ack_timeout, reboot_id=None):
+def upload(can, ids, image, start_timeout, ack_timeout, reboot_id=None):
     total = len(image)
     print(f"Image: {total} bytes, {(total + BLOCK_SIZE - 1) // BLOCK_SIZE} block(s)")
 
@@ -143,8 +187,8 @@ def upload(can, image, start_timeout, ack_timeout, reboot_id=None):
     while True:
         if reboot_id is not None:
             can.send(reboot_id)
-        can.send(CANID_RX_START, struct.pack(">I", total))
-        if can.wait_for(CANID_TX_START_ACK, 0.1) is not None:
+        can.send(ids.RX_START, struct.pack(">I", total))
+        if can.wait_for(ids.TX_START_ACK, 0.1) is not None:
             break
         if time.monotonic() > deadline:
             raise TimeoutError("no START_ACK -- did the target reset in time?")
@@ -153,16 +197,16 @@ def upload(can, image, start_timeout, ack_timeout, reboot_id=None):
     # --- Blocks -------------------------------------------------------------
     for base in range(0, total, BLOCK_SIZE):
         block = image[base:base + BLOCK_SIZE]
-        can.send(CANID_RX_BLOCK_START, struct.pack(">I", base))
-        if can.wait_for(CANID_TX_BLOCK_START_ACK, ack_timeout) is None:
+        can.send(ids.RX_BLOCK_START, struct.pack(">I", base))
+        if can.wait_for(ids.TX_BLOCK_START_ACK, ack_timeout) is None:
             raise TimeoutError(f"no BLOCK_START_ACK at offset {base}")
 
         for seq, off in enumerate(range(0, len(block), FRAME_SIZE)):
             chunk = block[off:off + FRAME_SIZE]
-            can.send(CANID_RX_DATA | seq, chunk)
+            can.send(ids.RX_DATA | seq, chunk)
 
-        can.send(CANID_RX_BLOCK_FINISH)
-        ack = can.wait_for(CANID_TX_BLOCK_FINISH_ACK, ack_timeout)
+        can.send(ids.RX_BLOCK_FINISH)
+        ack = can.wait_for(ids.TX_BLOCK_FINISH_ACK, ack_timeout)
         if ack is None:
             raise TimeoutError(f"no BLOCK_FINISH_ACK at offset {base}")
         written = struct.unpack(">I", ack[:4])[0]
@@ -173,8 +217,8 @@ def upload(can, image, start_timeout, ack_timeout, reboot_id=None):
         print(f"  block {base:#08x} ({len(block)} bytes) ok")
 
     # --- Verify -------------------------------------------------------------
-    can.send(CANID_RX_VERIFY)
-    resp = can.wait_for(CANID_TX_VERIFY_RESP, ack_timeout)
+    can.send(ids.RX_VERIFY)
+    resp = can.wait_for(ids.TX_VERIFY_RESP, ack_timeout)
     if resp is None:
         raise TimeoutError("no VERIFY_RESP")
     device_crc = struct.unpack(">I", resp[:4])[0]
@@ -183,11 +227,34 @@ def upload(can, image, start_timeout, ack_timeout, reboot_id=None):
         raise RuntimeError(
             f"CRC mismatch: device={device_crc:08X} host={host_crc:08X}")
     print(f"Verify OK (crc32={host_crc:08X}). Upload complete.")
-    can.send(CANID_RX_BOOT)
+
+    # --- Boot ---------------------------------------------------------------
+    # Verified, so tell the target to exit the bootloader and run the new app.
+    # This is fire-and-forget: the target boots immediately and sends no ack.
+    can.send(ids.RX_BOOT)
+    print("Sent BOOT -- target running application.")
+
+
+def parse_device(s):
+    """Accept a device name (e.g. 'dbms') or a numeric id (1-8, any base)."""
+    key = s.strip().lower()
+    if key in DEVICES:
+        return DEVICES[key]
+    try:
+        val = int(s, 0)
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"unknown device {s!r}; expected one of {', '.join(DEVICES)} or a number")
+    if not 1 <= val <= 0xF:
+        raise argparse.ArgumentTypeError(f"device id {val} out of range (1-15)")
+    return val
+
 
 def main():
     ap = argparse.ArgumentParser(description="Upload a firmware image to CANBL.")
     ap.add_argument("image", help="application binary (.bin)")
+    ap.add_argument("--device", type=parse_device, required=True,
+                    help="target device: name (" + ", ".join(DEVICES) + ") or numeric id")
     ap.add_argument("--host", default=DEFAULT_HOST, help=f"adapter host (default {DEFAULT_HOST})")
     ap.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"adapter port (default {DEFAULT_PORT})")
     ap.add_argument("--start-timeout", type=float, default=30.0,
@@ -208,10 +275,12 @@ def main():
         sys.exit("error: image file is empty")
 
     reboot_id = None if args.manual_reset else args.reboot_id
+    ids = Ids(args.device)
+    print(f"Target device id: {args.device} (base id {canid(args.device, 0):08X})")
 
     can = CanTcp(args.host, args.port, verbose=args.verbose)
     try:
-        upload(can, image, args.start_timeout, args.ack_timeout, reboot_id)
+        upload(can, ids, image, args.start_timeout, args.ack_timeout, reboot_id)
     except (TimeoutError, RuntimeError, ConnectionError) as e:
         sys.exit(f"upload failed: {e}")
     finally:

@@ -85,4 +85,8 @@ void LoadFallbackSettings(DbmsCtx* ctx)
 
     ctx->settings->user_defined[CAN_BUSOFF_RECOVERY_MS] = 1000;
     ctx->settings->user_defined[CAN_BUSOFF_GOOD_MS] = 100;
+
+    ctx->settings->user_defined[VOLTAGE_DELTA_TIMEOUT_MS] = 50;
+    ctx->settings->user_defined[VOLTAGE_OVER_TIMEOUT_MS] = 10;
+    ctx->settings->user_defined[VOLTAGE_UNDER_TIMEOUT_MS] = 10;
 }

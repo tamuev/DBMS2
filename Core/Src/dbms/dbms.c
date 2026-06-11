@@ -422,6 +422,7 @@ void DbmsIter(DbmsCtx* ctx)
         SaveQStats(ctx);
         WRITE_REG(RTC->BKP0R, 0xB00710AD);
         NVIC_SystemReset();
+        while (1);
     }
 
     /**
