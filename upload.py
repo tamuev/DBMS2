@@ -88,10 +88,19 @@ class Ids:
         self.RX_DATA                 = canid(device, MSG_DATA)
 
 
-# Blank frame here asks the running application to reboot into the bootloader,
-# setting the flash-request flag so the bootloader stays in flash mode. This is
-# an application-level magic frame, independent of the CANBL device scheme.
-CANID_REBOOT              = 0x0B00B007
+# Per-device reboot frames. A blank frame on a device's reboot ID asks its
+# running application to reboot into the bootloader, setting the flash-request
+# flag so the bootloader stays in flash mode. This is an application-level magic
+# frame, independent of the CANBL device scheme, so each board picks its own
+# arbitrary ID. Keyed by device id (see DEVICES). A device with no entry here
+# has no graceful-reboot frame, so the uploader falls back to a manual reset.
+CANID_REBOOT = {
+    DEVICES["dbms"]: 0x0B00B007,
+    DEVICES["fl_node"]: 0x217,
+    DEVICES["fr_node"]: 0x227,
+    DEVICES["bl_node"]: 0x237,
+    DEVICES["br_node"]: 0x247,
+}
 
 BLOCK_SIZE = 2048   # max bytes per block: 256 data frames * 8 bytes
 FRAME_SIZE = 8
@@ -149,8 +158,8 @@ class CanTcp:
         del self._rx[:PACKET_LEN]
         can_id = struct.unpack(">I", pkt[1:5])[0] & 0x1FFFFFFF
         data = bytes(pkt[5:13])
-        if self.verbose:
-            print(f"[rx] id={can_id:08X} k={pkt[0]:02X} data={data.hex()}")
+        # if self.verbose:
+            # print(f"[rx] id={can_id:08X} k={pkt[0]:02X} data={data.hex()}")
         return can_id, data
 
     def wait_for(self, expected_id, timeout):
@@ -166,8 +175,8 @@ class CanTcp:
             can_id, data = frame
             if can_id == expected_id:
                 return data
-            if self.verbose:
-                print(f"[..] ignoring unexpected id={can_id:08X}")
+            # if self.verbose:
+                # print(f"[..] ignoring unexpected id={can_id:08X}")
 
 
 def upload(can, ids, image, start_timeout, ack_timeout, reboot_id=None):
@@ -261,8 +270,9 @@ def main():
                     help="seconds to keep retrying START while waiting for a reset")
     ap.add_argument("--ack-timeout", type=float, default=2.0,
                     help="seconds to wait for each block/verify ack")
-    ap.add_argument("--reboot-id", type=lambda x: int(x, 0), default=CANID_REBOOT,
-                    help=f"CAN id for the graceful reboot frame (default {CANID_REBOOT:#010x})")
+    ap.add_argument("--reboot-id", type=lambda x: int(x, 0), default=None,
+                    help="CAN id for the graceful reboot frame (overrides the per-device "
+                         "default; if the device has no default either, a manual reset is used)")
     ap.add_argument("--manual-reset", action="store_true",
                     help="don't send the graceful reboot frame; wait for a manual reset "
                          "instead (use when the application firmware is unresponsive)")
@@ -274,7 +284,18 @@ def main():
     if not image:
         sys.exit("error: image file is empty")
 
-    reboot_id = None if args.manual_reset else args.reboot_id
+    # Resolve the reboot frame: an explicit --reboot-id wins; --manual-reset
+    # forces a manual reset; otherwise use the device's own default, falling
+    # back to a manual reset when the device has no reboot ID configured.
+    if args.manual_reset:
+        reboot_id = None
+    elif args.reboot_id is not None:
+        reboot_id = args.reboot_id
+    else:
+        reboot_id = CANID_REBOOT.get(args.device)
+        if reboot_id is None:
+            print("No reboot id for this device -- falling back to manual reset.")
+
     ids = Ids(args.device)
     print(f"Target device id: {args.device} (base id {canid(args.device, 0):08X})")
 

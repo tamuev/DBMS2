@@ -5,4 +5,4 @@ grep -rl 'fcyclomatic-complexity' --exclude=deploy.sh . | xargs -r sed -i 's/ -f
 make -C Release all
 
 arm-none-eabi-objcopy -O binary "Release/DBMS2.elf" "Release/DBMS2.bin"
-python3 upload.py Release/DBMS2.bin --manual-reboot
+python3 upload.py Release/DBMS2.bin --device dbms
