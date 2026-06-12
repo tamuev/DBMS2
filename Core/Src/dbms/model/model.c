@@ -151,8 +151,6 @@ void ComputeModel(Model* m, float T_bar, float I, float Q0, float Qd, float V_pa
 
 void UpdateModel(DbmsCtx* ctx)
 {
-
-
     float v_pack = (ctx->current_sensor.voltage1_mv / 1e3f) / (N_SIDES * N_GROUPS_PER_SIDE);
     float current = (ctx->current_sensor.current_ma / 1000.0) / N_P_GROUP;
     ctx->qstats.accumulated_loss = (ctx->current_sensor.charge_as - ctx->current_sensor.q_offset) / 3600.0;    // convert to Ah
@@ -190,7 +188,7 @@ int LoadQStats(DbmsCtx* ctx)
 int SaveQStats(DbmsCtx* ctx)
 {
     ctx->qstats.historic_accumulated_loss = ctx->initial_historic_accumulated_loss + ctx->qstats.accumulated_loss;
-    CanLog(ctx, "saving hist: %d\n", (int)(ctx->qstats.historic_accumulated_loss * 1000));
+    // CanLog(ctx, "saving hist: %d\n", (int)(ctx->qstats.historic_accumulated_loss * 1000));
     return SaveStoredObject(
             ctx, EEPROM_INITIAL_CHARGE, &ctx->qstats, sizeof(ctx->qstats));
 }

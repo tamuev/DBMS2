@@ -59,6 +59,8 @@
 
 #define CANID_RX_DO_BAL_LOOP        0x0BE
 
+#define CANID_RX_BOOTLOADER         0x0B00B007 // booboot
+
 #define CANID_RX_BLACKBOX_REQUEST   0x0B006000
 #define CANID_TX_BLACKBOX           0x0B007000
 #define CANID_TX_BLACKBOX_SIZE      0x0B008000

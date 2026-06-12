@@ -286,6 +286,9 @@ typedef struct _Timing {
     uint64_t pl_last_ok_ts;
     uint64_t pl_pulse_t;
     uint64_t overtemp_last_ok_ts;
+    uint32_t v_delta_last_ok_ts;
+    uint32_t v_over_last_ok_ts;
+    uint32_t v_under_last_ok_ts;
 } Timing;
 
 typedef struct _Flags {
@@ -303,6 +306,7 @@ typedef struct _Flags {
     bool need_to_save_bad_therms;
     bool need_to_save_distance;
     bool fan_on;
+    volatile bool req_reboot;
 } Flags;
 
 typedef struct _ChargeStats {

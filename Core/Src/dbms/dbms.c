@@ -111,6 +111,8 @@ void DbmsInit(DbmsCtx* ctx)
 
     ReadEEPROM(ctx, EEPROM_DEBUG, &ctx->stats.n_int_shutdowns, 1);
 
+    HAL_PWR_EnableBkUpAccess();
+
     #ifdef HAS_FAN
     InitFan(ctx);
     #endif
@@ -415,6 +417,14 @@ void DbmsIter(DbmsCtx* ctx)
     }
     // ctx->profiling.profiling.times.T7 = GetUs(ctx);
 
+    if (ctx->flags.req_reboot)
+    {
+        SaveQStats(ctx);
+        WRITE_REG(RTC->BKP0R, 0xB00710AD);
+        NVIC_SystemReset();
+        while (1);
+    }
+
     /**
      * Transmit telemetry
      */
@@ -642,6 +652,9 @@ void DbmsCanRx(DbmsCtx* ctx, CanRxChannel channel, CAN_RxHeaderTypeDef rx_header
     case CANID_CHARGING_HB:
         CanLog(ctx, "Charging HB\n");
         ctx->charging.heartbeat = HAL_GetTick();
+        break;
+    case CANID_RX_BOOTLOADER:
+        ctx->flags.req_reboot = true;
         break;
     // case 0x181:
     //     CanLog(ctx, "got it\n");

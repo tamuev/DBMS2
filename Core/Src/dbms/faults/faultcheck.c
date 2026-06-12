@@ -17,13 +17,30 @@ void CheckVoltageFaults(DbmsCtx* ctx)
     uint32_t min_group_v = GetSetting(ctx, MIN_GROUP_VOLTAGE);
     uint32_t max_v_delta = GetSetting(ctx, MAX_V_DELTA);
     
-    if (ctx->stats.max_v * 1000 > max_group_v) {
+    if (ctx->stats.max_v * 1000 <= max_group_v) 
+    {
+        ctx->timing.v_over_last_ok_ts = HAL_GetTick();
+    }
+    else if (HAL_GetTick() - ctx->timing.v_over_last_ok_ts >= GetSetting(ctx, VOLTAGE_OVER_TIMEOUT_MS))
+    {
         CtrlSetFault(ctx, CTRL_FAULT_VOLTAGE_OVER, ctx->stats.max_v_cell, CLAMP_U16(ctx->stats.max_v * 1000));
     }
-    if (ctx->stats.min_v * 1000 < min_group_v) {
+
+    if (ctx->stats.min_v * 1000 >= min_group_v) 
+    {
+        ctx->timing.v_under_last_ok_ts = HAL_GetTick();
+    } 
+    else if (HAL_GetTick() - ctx->timing.v_under_last_ok_ts >= GetSetting(ctx, VOLTAGE_UNDER_TIMEOUT_MS))
+    {
         CtrlSetFault(ctx, CTRL_FAULT_VOLTAGE_UNDER, ctx->stats.min_v_cell, CLAMP_U16(ctx->stats.min_v * 1000));
     }
-    if ((ctx->stats.max_v - ctx->stats.min_v) * 1000 > max_v_delta) {
+
+    if ((ctx->stats.max_v - ctx->stats.min_v) * 1000 <= max_v_delta) 
+    {
+        ctx->timing.v_delta_last_ok_ts = HAL_GetTick();
+    } 
+    else if (HAL_GetTick() - ctx->timing.v_delta_last_ok_ts >= GetSetting(ctx, VOLTAGE_DELTA_TIMEOUT_MS))
+    {
         // Find cell voltage furthest from average
         uint16_t avg_mv = (uint16_t)(ctx->stats.avg_v * 1000.0f);
         uint16_t max_diff = 0;
