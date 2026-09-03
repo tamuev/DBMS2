@@ -48,6 +48,8 @@
 #define N_C_ENTRIES                 101
 #define N_I_MA_MEMORIZED            100
 
+#define SOC_STEP (1.0f / (float)(N_OCV_ENTRIES - 1))
+
 #define ALPHA                       0.25
 #define BETA                        0.125
 
