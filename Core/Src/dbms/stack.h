@@ -81,7 +81,7 @@
 #define REG_OTP_ECC_TEST        0x034C
 
 // GPIO Conf
-typedef enum _StackGPIOMode : uint8_t
+typedef enum _StackGPIOMode
 {
     STACK_GPIO_DISABLED = 0,
     STACK_GPIO_ADC_OTUT_IN,

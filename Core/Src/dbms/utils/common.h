@@ -35,7 +35,7 @@
 /**
  * Clamp x between low and high
  */
-#define CLAMP(X, LOW, HIGH) X < LOW ? LOW : (X > HIGH ? HIGH : X)
+#define CLAMP(X, LOW, HIGH) ((X) < (LOW) ? (LOW) : ((X) > (HIGH) ? (HIGH) : (X)))
 
 
 /**

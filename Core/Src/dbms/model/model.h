@@ -28,9 +28,10 @@
 extern const float TEMPS[N_TEMPS];
 
 void UpdateModel(DbmsCtx* ctx);
-
 int LoadQStats(DbmsCtx* ctx);
 int SaveQStats(DbmsCtx* ctx);
 int PeriodicSaveQStats(DbmsCtx *ctx);
+
+float F_Q_top(DbmsCtx* ctx, float ocv, float T_bar);
 
 #endif

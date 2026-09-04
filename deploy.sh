@@ -1,4 +1,3 @@
-#!/bin/sh
 set -e
 
 grep -rl 'fcyclomatic-complexity' --exclude=deploy.sh . | xargs -r sed -i 's/ -fcyclomatic-complexity//g'

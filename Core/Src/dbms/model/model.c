@@ -119,7 +119,7 @@ void find_bracket_desc(const float* table, int min, int max, float target, int* 
 //  Calculate current charge
 //  Interpolates both temperature (Celsius) and OCV values to obtain z and then Q_top
 //
-float ReverseLookupOCV(float ocv, float T_bar, const float* table, int cols)
+float ReverseLookupOCV(DbmsCtx* ctx, float ocv, float T_bar, const float* table, int cols)
 {
     // === Temperature === //
     T_bar = CLAMP(T_bar, TEMPS[0], TEMPS[N_TEMPS - 1]); // Force temp into acceptable range
@@ -140,6 +140,7 @@ float ReverseLookupOCV(float ocv, float T_bar, const float* table, int cols)
 
     // === Low Temp OCV === //
     float clamped_ocv = CLAMP(ocv, table[high_t_idx * cols - 1], table[low_t_idx * cols]);
+
     int low_t_idx_ge;
     int low_t_idx_le;
     find_bracket_desc(table, low_t_idx * cols, high_t_idx * cols, clamped_ocv, &low_t_idx_ge,
@@ -155,7 +156,7 @@ float ReverseLookupOCV(float ocv, float T_bar, const float* table, int cols)
         low_z = low_z_ge; 
     else
         low_z = low_z_le +
-        ((clamped_ocv - low_ocv_le) / (low_ocv_ge - low_ocv_le)) *
+        ((ocv - low_ocv_le) / (low_ocv_ge - low_ocv_le)) *
         SOC_STEP;
     // NOTE: low_ocv_ge is larger element because table is descending even though its index (low_t_idx_ge) is left bound
 
@@ -175,13 +176,14 @@ float ReverseLookupOCV(float ocv, float T_bar, const float* table, int cols)
         high_z = high_z_ge;
     else
         high_z = high_z_le +
-        ((clamped_ocv - high_ocv_le) / (high_ocv_ge - high_ocv_le)) *
+        ((ocv - high_ocv_le) / (high_ocv_ge - high_ocv_le)) *
         SOC_STEP;
 
     // === Temperature Interpolation === //
     float final_z = T_frac * (high_z - low_z) + low_z;            // Final SoC
+    float q_max = F_Q_max(T_bar, Q_BOUND_H_OC, Q_BOUND_L_OC);
+    float Q_cur = final_z * q_max; // Calculate current charge from SoC in Ah
     final_z = CLAMP(final_z, 0.0f, 1.0f); // Clamp just in case
-    float Q_cur = final_z * F_Q_max(T_bar, Q_BOUND_H_OC, Q_BOUND_L_OC); // Calculate current charge from SoC in Ah
 
     return Q_cur;
 }
@@ -189,9 +191,9 @@ float ReverseLookupOCV(float ocv, float T_bar, const float* table, int cols)
 //
 //  Calc Current Charge
 //
-float F_Q_top(float ocv, float T_bar)
+float F_Q_top(DbmsCtx* ctx, float ocv, float T_bar)
 {
-    return ReverseLookupOCV(ocv, T_bar, (const float*)ocv_table, N_OCV_ENTRIES);
+    return ReverseLookupOCV(ctx, ocv, T_bar, (const float*)ocv_table, N_OCV_ENTRIES);
 }
 
 //

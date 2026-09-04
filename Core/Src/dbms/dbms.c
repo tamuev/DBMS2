@@ -385,8 +385,8 @@ void DbmsIter(DbmsCtx* ctx)
     // ctx->profiling.profiling.times.T5 = GetUs(ctx);
     if (ctx->flags.req_recalibrate_charge)
     {
-        ctx->qstats.initial = F_Q_top(ctx->stats.avg_v, ctx->stats.avg_t); // Calculate from model
-        CanLog(ctx, "Recalibration inputs: OCV=%d mV T=%d mC Q=%d mAh\n", 
+        ctx->qstats.initial = F_Q_top(ctx, ctx->stats.avg_v, ctx->stats.avg_t); // Calculate from model
+        CanLog(ctx, "Recalibration inputs: OCV=%d mV T=%d mC Q=%ld mAh\n", 
             (int)(ctx->stats.avg_v * 1000.0f), 
             (int)(ctx->stats.avg_t * 1000.0f), 
             (int)(ctx->qstats.initial * 1000.0f));
