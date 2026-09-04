@@ -38,6 +38,8 @@ void DbmsInit(DbmsCtx* ctx)
     int status = 0;
     ctx->flags.active = false;
     ctx->led_state = LED_INIT;
+    
+    ctx->flags.req_recalibrate_charge = false; // new (remove after testing)
 
     if ((status = LoadSettings(ctx)) != HAL_OK)
     {
@@ -381,6 +383,22 @@ void DbmsIter(DbmsCtx* ctx)
     // }
 
     // ctx->profiling.profiling.times.T5 = GetUs(ctx);
+    if (ctx->flags.req_recalibrate_charge)
+    {
+        ctx->qstats.initial = F_Q_top(ctx->stats.avg_v, ctx->stats.avg_t); // Calculate from model
+        CanLog(ctx, "Recalibration inputs: OCV=%d mV T=%d mC Q=%d mAh\n", 
+            (int)(ctx->stats.avg_v * 1000.0f), 
+            (int)(ctx->stats.avg_t * 1000.0f), 
+            (int)(ctx->qstats.initial * 1000.0f));
+
+        ctx->qstats.accumulated_loss = 0;
+        ctx->qstats.historic_accumulated_loss = 0;
+        ctx->initial_historic_accumulated_loss = 0;
+        // ctx->qstats.initial_set_ts = (int32_t)(GetRealTime(ctx) / 1000);
+        ctx->qstats.initial_set_ts = 0;
+        ctx->flags.need_to_reset_qstats = true;
+        ctx->flags.req_recalibrate_charge = false;
+    }
 
     ChargingUpdate(ctx);
 
@@ -571,15 +589,18 @@ void DbmsCanRx(DbmsCtx* ctx, CanRxChannel channel, CAN_RxHeaderTypeDef rx_header
     case CANID_RX_FAULTS_CONFIG:
         CtrlSetFaultConfig(ctx, be32_to_u32(rx_data + 0), be32_to_u32(rx_data + 4));
         break;
+    // case CANID_RX_SET_INITIAL_CHARGE:
+    //     ctx->qstats.initial = be32_to_u32(rx_data) / 1e6f;
+    //     CanLog(ctx, "Q0: %d\n", be32_to_u32(rx_data));
+    //     ctx->qstats.accumulated_loss = 0;
+    //     ctx->qstats.historic_accumulated_loss = 0;
+    //     ctx->initial_historic_accumulated_loss = 0;
+    //     // ctx->qstats.initial_set_ts = (int32_t)(GetRealTime(ctx) / 1000);
+    //     ctx->qstats.initial_set_ts = 0;
+    //     ctx->flags.need_to_reset_qstats = true;
+    //     break;
     case CANID_RX_SET_INITIAL_CHARGE:
-        ctx->qstats.initial = be32_to_u32(rx_data) / 1e6f;
-        CanLog(ctx, "Q0: %d\n", be32_to_u32(rx_data));
-        ctx->qstats.accumulated_loss = 0;
-        ctx->qstats.historic_accumulated_loss = 0;
-        ctx->initial_historic_accumulated_loss = 0;
-        // ctx->qstats.initial_set_ts = (int32_t)(GetRealTime(ctx) / 1000);
-        ctx->qstats.initial_set_ts = 0;
-        ctx->flags.need_to_reset_qstats = true;
+        ctx->flags.req_recalibrate_charge = true;
         break;
 
     case CANID_RX_BLACKBOX_REQUEST:

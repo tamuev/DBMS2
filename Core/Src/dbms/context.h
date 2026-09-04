@@ -309,6 +309,7 @@ typedef struct _Flags {
     bool need_to_save_distance;
     bool fan_on;
     volatile bool req_reboot;
+    bool req_recalibrate_charge; // New flag for SetInitialCharge (delete after testing)
 } Flags;
 
 typedef struct _ChargeStats {
