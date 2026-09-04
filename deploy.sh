@@ -2,6 +2,7 @@
 set -e
 
 grep -rl 'fcyclomatic-complexity' --exclude=deploy.sh . | xargs -r sed -i 's/ -fcyclomatic-complexity//g'
+cmake . --preset Release
 cmake --build build/Release
 
 arm-none-eabi-objcopy -O binary "build/Release/DBMS2.elf" "build/Release/DBMS2.bin"
