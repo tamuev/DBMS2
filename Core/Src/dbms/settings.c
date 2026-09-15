@@ -89,4 +89,8 @@ void LoadFallbackSettings(DbmsCtx* ctx)
     ctx->settings->user_defined[VOLTAGE_DELTA_TIMEOUT_MS] = 50;
     ctx->settings->user_defined[VOLTAGE_OVER_TIMEOUT_MS] = 10;
     ctx->settings->user_defined[VOLTAGE_UNDER_TIMEOUT_MS] = 10;
+
+    ctx->settings->user_defined[DCU_POWER_LIMIT] = 80;
+    ctx->settings->user_defined[DCU_SAFETY_FACTOR] = 70;
+    ctx->settings->user_defined[DCU_EXTRA_LOGS] = 0;
 }

@@ -200,6 +200,32 @@ int DbmsPerformShutdown(DbmsCtx* ctx, bool shutdown_stack)
 }
 
 /**
+ * Creates and sends canframe of DCU settings
+ */
+static void SendDCUSettings(DbmsCtx* ctx)
+{
+    uint8_t frame[8] = {0};
+
+    uint16_t power_limit = (uint16_t)GetSetting(ctx, DCU_POWER_LIMIT);
+    uint16_t safety_factor = (uint16_t)GetSetting(ctx, DCU_SAFETY_FACTOR);
+    uint16_t extra_logs = (uint16_t)GetSetting(ctx, DCU_EXTRA_LOGS);
+
+    // Bytes 0-1: Power limit
+    frame[0] = (uint8_t)(power_limit >> 8);
+    frame[1] = (uint8_t)(power_limit);
+
+    // Bytes 2-3: Safety factor
+    frame[2] = (uint8_t)(safety_factor >> 8);
+    frame[3] = (uint8_t)(safety_factor);
+    
+    // Bytes 4-5: Extra logs
+    frame[4] = (uint8_t)(extra_logs >> 8);
+    frame[5] = (uint8_t)(extra_logs);
+
+    CanTransmit(ctx, CANID_TX_DCU_SETTINGS, frame);
+}
+
+/**
  * Handle active logic: poll voltages and temps, handle faults, etc.
  */
 void DbmsHandleActive(DbmsCtx* ctx)
@@ -245,7 +271,6 @@ void DbmsHandleActive(DbmsCtx* ctx)
         CanTransmit(ctx, CANID_TX_DELAY, init_frame);
     }
 }
-
 
 void DbmsIter(DbmsCtx* ctx)
 {
@@ -330,6 +355,11 @@ void DbmsIter(DbmsCtx* ctx)
             SaveStoredObject(ctx, EEPROM_DISTANCE, &ctx->stats.distance, sizeof(ctx->stats.distance));
             ctx->stats.last_saved_distance = ctx->stats.distance;
         }
+    }
+
+    if (ctx->stats.iters % 30 == 0)
+    {
+        SendDCUSettings(ctx);
     }
 
     // Let everybody know that we are alive
@@ -589,16 +619,6 @@ void DbmsCanRx(DbmsCtx* ctx, CanRxChannel channel, CAN_RxHeaderTypeDef rx_header
     case CANID_RX_FAULTS_CONFIG:
         CtrlSetFaultConfig(ctx, be32_to_u32(rx_data + 0), be32_to_u32(rx_data + 4));
         break;
-    // case CANID_RX_SET_INITIAL_CHARGE:
-    //     ctx->qstats.initial = be32_to_u32(rx_data) / 1e6f;
-    //     CanLog(ctx, "Q0: %d\n", be32_to_u32(rx_data));
-    //     ctx->qstats.accumulated_loss = 0;
-    //     ctx->qstats.historic_accumulated_loss = 0;
-    //     ctx->initial_historic_accumulated_loss = 0;
-    //     // ctx->qstats.initial_set_ts = (int32_t)(GetRealTime(ctx) / 1000);
-    //     ctx->qstats.initial_set_ts = 0;
-    //     ctx->flags.need_to_reset_qstats = true;
-    //     break;
     case CANID_RX_SET_INITIAL_CHARGE:
         ctx->flags.req_recalibrate_charge = true;
         break;
