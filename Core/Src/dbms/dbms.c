@@ -226,6 +226,27 @@ static void SendDCUSettings(DbmsCtx* ctx)
 }
 
 /**
+ * Adds element to rotating buffer 
+ */
+void RotatingBufferAdd(RotatingBuffer* b, uint64_t value)
+{
+    if (b->count < LOOPTIME_BUFFER_CAPCITY)
+    {
+        b->sum += value;
+        b->count++;
+    }
+
+    else
+    {
+        b->sum -= b->values[b->next];
+        b->sum += value;
+    }
+
+    b->values[b->next] = value;
+    b->next = (b->next + 1) % LOOPTIME_BUFFER_CAPCITY;
+}
+
+/**
  * Handle active logic: poll voltages and temps, handle faults, etc.
  */
 void DbmsHandleActive(DbmsCtx* ctx)
@@ -234,11 +255,13 @@ void DbmsHandleActive(DbmsCtx* ctx)
     ctx->profiling.times.T0 = GetUs(ctx);
 
     StackUpdateAllVoltReadings(ctx);
-    HAL_Delay(10);
+    // HAL_Delay(2);
+    DelayUs(500);
     ctx->profiling.times.T1 = GetUs(ctx);
 
     StackUpdateAllTempReadings(ctx);
-    HAL_Delay(10);
+    // HAL_Delay(2);
+    DelayUs(500);
     ctx->profiling.times.T2 = GetUs(ctx);
     ctx->profiling.times.T3 = GetUs(ctx);
 
@@ -536,8 +559,15 @@ void DbmsIter(DbmsCtx* ctx)
     /**
      * Schedule the next loop
      */
+
     ctx->timing.iter_end_us = GetUs(ctx);
     ctx->stats.looptime = ctx->timing.iter_end_us - ctx->timing.iter_start_us;
+    RotatingBufferAdd(&ctx->stats.looptime_buffer, ctx->stats.looptime);
+    if (ctx->stats.looptime_buffer.count != 0)
+    {
+        ctx->stats.looptime_average = (uint64_t)(ctx->stats.looptime_buffer.sum / ctx->stats.looptime_buffer.count);
+    }
+
     ctx->stats.end_delay = CalcIterDelay(ctx, ITER_TARGET_HZ);
     // ctx->profiling.profiling.times.T9 = GetUs(ctx);
     SetMuxChannels(ctx, ctx->stats.iters % 4);

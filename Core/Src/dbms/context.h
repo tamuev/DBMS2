@@ -19,7 +19,7 @@
 
 #define SPLIT_STACK_OPS     1       // 1 = divide stack ops in half, every-other-iter, 0 = do not
 
-#define N_SEGMENTS          5       // number of segments in the stack
+#define N_SEGMENTS          1       // number of segments in the stack
 #define N_SIDES_PER_SEG     2       // number of sides per segment
 #define N_MONITORS_PER_SIDE 1       // number of monitors per side
 #define N_GROUPS_PER_SIDE   13      // number of voltages per side
@@ -52,6 +52,8 @@
 
 #define ALPHA                       0.25
 #define BETA                        0.125
+
+#define LOOPTIME_BUFFER_CAPCITY     20
 
 // DANGER:  THESE DEBUGS WILL PREVENT THE CONTROLLER FROM WORKING NORMALLY
 // #define DEBUG_DO_OVERWRITE_TEMPS_OVER_CAN
@@ -105,6 +107,15 @@ typedef struct _DbmsSettings DbmsSettings;
 // fwd definition for enum -- led_controller.h
 typedef int32_t LedState;
 
+typedef struct _RotatingBuffer
+{
+    uint64_t values[LOOPTIME_BUFFER_CAPCITY];
+    uint64_t next;
+    uint64_t count;
+    uint64_t sum;
+
+} RotatingBuffer;
+
 typedef struct _Stats
 {
     uint64_t iters;
@@ -121,7 +132,9 @@ typedef struct _Stats
     uint32_t n_tx_can_fail;
     uint32_t n_tx_queued;
 
-    uint32_t looptime;
+    uint64_t looptime;
+    uint64_t looptime_average;
+    RotatingBuffer looptime_buffer;
     uint32_t end_delay;
 
     uint32_t n_rx_stack_frames;

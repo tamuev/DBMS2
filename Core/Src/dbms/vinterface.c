@@ -282,7 +282,10 @@ void SendPlexMetrics(DbmsCtx* ctx)
     SendPlex32x2(ctx, 0x1B, 0, F2I_K(ctx->model.R_rc, 1e6));
     SendPlex32x2(ctx, 0x1C, F2I_K(ctx->model.R_cell, 1e6), F2I_K(ctx->model.I_lim, 1e6));
     SendPlex32x2(ctx, 0x1D, F2I_K(ctx->model.P_lim, 1e3), ctx->current_sensor.current_ma / N_P_GROUP);
-    SendPlex16x4(ctx, 0x1E, ctx->stats.n_can_bussoffs, 0, ctx->flags.fan_on, 0);
+    if (ctx->stats.looptime_average) 
+    {
+        SendPlex16x4(ctx, 0x1E, ctx->stats.n_can_bussoffs, 0, ctx->flags.fan_on, (uint16_t)(100000000ULL / ctx->stats.looptime_average));
+    }
 }
 
 
