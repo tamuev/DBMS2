@@ -698,9 +698,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
             // CanLog(&dbms_ctx, "QD = %d\n", (uint32_t)(dbms_ctx.qstats.historic_accumulated_loss * 1000));
             // CanLog(&dbms_ctx, "bye\n");
             // dbms_ctx.qstats.initial = 99;//test
+            SaveQStats(&dbms_ctx);
             dbms_ctx.stats.n_int_shutdowns++;
             WriteEEPROM(&dbms_ctx, EEPROM_DEBUG, &dbms_ctx.stats.n_int_shutdowns, 1);
-            SaveQStats(&dbms_ctx);
         }
         else
         {
