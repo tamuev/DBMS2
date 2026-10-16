@@ -128,6 +128,8 @@ void ChargingEnterState(DbmsCtx* ctx, ChargingState new_state)
         {
             memset(ctx->cell_states[i].cells_to_balance, 0, sizeof(ctx->cell_states[i].cells_to_balance));
         }
+        StackStartBalancing(ctx, false, 0); // Stop an existing charging command
+        SendCellsToBalance(ctx);
         break;
     case CH_CHARGING:
         CanLog(ctx, "Enter Ch\n");
