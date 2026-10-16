@@ -100,7 +100,7 @@ void ChargingComputePreBalanceAverages(DbmsCtx* ctx)
     }
 }
 
-static uint32_t bal_times[] = {0, 10, 30, 60};
+static uint32_t bal_times[] = {0, 10, 30, 60, 300};
 #define LOOKUP_BAL_TIMES(T)       (bal_times[MIN((uint8_t)T, (uint8_t)__N_BAL_TIMES - 1)])
 #define TIME_IN_STATE_MS(CTX_PTR) (HAL_GetTick() - CTX_PTR->charging.state_enter_ts)
 

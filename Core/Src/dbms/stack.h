@@ -297,6 +297,7 @@ typedef enum {
     BAL_TIME_10S,
     BAL_TIME_30S,
     BAL_TIME_60S,
+    BAL_TIME_300S,
     __N_BAL_TIMES
 } StackBalanceTimes;
 
